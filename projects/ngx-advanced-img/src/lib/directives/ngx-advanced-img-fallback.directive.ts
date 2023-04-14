@@ -11,6 +11,21 @@ export class NgxAdvancedImgFallbackDirective implements OnInit, OnDestroy {
   private removeErrorHandler: (() => void) | undefined;
 
   /**
+   * Public accessor for the active state of the fallback. If the fallback is
+   * currently being displayed, then this will return as true. This is useful
+   * if you need to change dimensions of your img element based on whether or
+   * not the fallback is active.
+   */
+  public get ngxAdvancedImgFallbackActive(): boolean {
+    if (this._src === 'cache-bust') {
+      // if we were cache busting, then we should check the failure url for matches
+      return this.elementRef?.nativeElement?.src === this._failureURL;
+    }
+
+    return this.elementRef?.nativeElement?.src === this._src;
+  }
+
+  /**
    * The fallback url to use when the image fails to load. If the url is
    * set to 'cache-bust', then the image will be reloaded with a cache bust
    * query parameter to attempt to force a reload. This is useful for cases
