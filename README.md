@@ -8,7 +8,7 @@ Angular attribute directives suite that provides various HTML img feature extens
   - [About This Package](#about-this-package)
   - [Installation](#installation)
   - [Usage](#usage)
-  - [API](#api)
+  - [Directives](#directives)
     - [ngxAdvancedImgFallback](#ngxadvancedimgfallback)
 
 ## About This Package
@@ -35,7 +35,7 @@ This package was built to provide easy to use feature directives that are meant 
 
 2. Import `ngx-advanced-img.scss` to your application's styles or add it to your `angular.json` if you use the CLI tools.
 
-## API
+## Directives
 
 ### ngxAdvancedImgFallback
 

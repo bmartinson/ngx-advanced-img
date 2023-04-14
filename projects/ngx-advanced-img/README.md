@@ -1,24 +1,46 @@
-# NgxAdvancedImg
+# ngx-advanced-img
 
-This library was generated with [Angular CLI](https://github.com/angular/angular-cli) version 15.2.0.
+Angular attribute directives suite that provides various HTML img feature extensions.
 
-## Code scaffolding
+## Table of contents
+- [ngx-advanced-img](#ngx-advanced-img)
+  - [Table of contents](#table-of-contents)
+  - [About This Package](#about-this-package)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [Directives](#directives)
+    - [ngxAdvancedImgFallback](#ngxadvancedimgfallback)
 
-Run `ng generate component component-name --project ngx-advanced-img` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module --project ngx-advanced-img`.
-> Note: Don't forget to add `--project ngx-advanced-img` or else it will be added to the default project in your `angular.json` file. 
+## About This Package
+This package was built to provide easy to use feature directives that are meant to be used with HTML img tags. The first two features being created are fallback image loading and progressive image loading and caching.
 
-## Build
+## Installation
+```npm install ngx-advanced-img --save```
 
-Run `ng build ngx-advanced-img` to build the project. The build artifacts will be stored in the `dist/` directory.
+## Usage
+1. Import `NgxAdvancedImgModule` in your app module (or other Angular module) and place it in your imports section:
 
-## Publishing
+    ```typescript
+    import { NgxAdvancedImgModule } from "ngx-advanced-img";
 
-After building your library with `ng build ngx-advanced-img`, go to the dist folder `cd dist/ngx-advanced-img` and run `npm publish`.
+    @NgModule({
+       imports: [
+         ...,
+         NgxAdvancedImgModule,
+       ],
+       ...
+    })
+    export class AppModule { }
+	  ```
 
-## Running unit tests
+2. Import `ngx-advanced-img.scss` to your application's styles or add it to your `angular.json` if you use the CLI tools.
 
-Run `ng test ngx-advanced-img` to execute the unit tests via [Karma](https://karma-runner.github.io).
+## Directives
 
-## Further help
+### ngxAdvancedImgFallback
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+This directive extends HTML img nodes to provide some special fallback loading functionality. If the initial load of the image src value fails, this directive will automatically swap to the provided fallback URL or data URI. Alternatively, you may provide a special value of `cache-bust` and it will handle reloading prevoiusly failed src but with a unique cache busting query parameter attached to the URL (assuming it is a valid URL).
+
+`ngxAdvancedImgFallback` {'cache-bust' | string}
++ `cache-bust`: If the img src is a valid URL and it fails to load, the img will fallback to the exact same url but with a `?cache-bust` query parameter added to it including a uniqiue timestamp value.
++ `string`: If the img src fails to load, the img will fallback to the provided string. This should be a valid URL or data URI. If this fails to load, no further action is taken.
