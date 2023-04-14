@@ -44,3 +44,6 @@ This directive extends HTML img nodes to provide some special fallback loading f
 `ngxAdvancedImgFallback` {'cache-bust' | string}
 + `cache-bust`: If the img src is a valid URL and it fails to load, the img will fallback to the exact same url but with a `?cache-bust` query parameter added to it including a uniqiue timestamp value.
 + `string`: If the img src fails to load, the img will fallback to the provided string. This should be a valid URL or data URI. If this fails to load, no further action is taken.
+
+`ngxAdvancedImgFallbackActive` {read-only boolean}
++ Returns the active state of the fallback. If the fallback is currently being displayed, then this will return as true. This is useful if you need to change width/height or other attributes of your img element based on whether or not the fallback is active.
