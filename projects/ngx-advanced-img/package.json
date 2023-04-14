@@ -1,0 +1,35 @@
+{
+  "name": "ngx-advanced-img",
+  "version": "0.0.1",
+  "private": false,
+  "license": "MIT",
+  "author": "Brian Martinson <brian@brianmartinson.com> (https://brianmartinson.com/)",
+  "description": "An Angular directive library for advanced img feature extensions.",
+  "keywords": [
+    "angular",
+    "img",
+    "fallback",
+    "progressive",
+    "loader",
+    "ng",
+    "ng2",
+    "ngx"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com:bmartinson/ngx-advanced-img.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bmartinson/ngx-advanced-img/issues",
+    "email": "brian@brianmartinson.com"
+  },
+  "homepage": "https://github.com/bmartinson/ngx-advanced-img#readme",
+  "peerDependencies": {
+    "@angular/common": ">= 15.0.0",
+    "@angular/core": ">= 15.0.0"
+  },
+  "dependencies": {
+    "tslib": "^2.3.0"
+  },
+  "sideEffects": false
+}

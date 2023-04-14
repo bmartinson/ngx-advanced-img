@@ -1,0 +1,14 @@
+{
+  "$schema": "../../node_modules/ng-packagr/ng-package.schema.json",
+  "assets": [
+    {
+      "glob": "**/*",
+      "input": "src/lib/styles",
+      "output": "./styles"
+    }
+  ],
+  "dest": "../../dist/ngx-advanced-img",
+  "lib": {
+    "entryFile": "src/public-api.ts"
+  }
+}
