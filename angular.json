@@ -68,10 +68,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "browserTarget": "ngx-advanced-img-sample:build:production"
+              "buildTarget": "ngx-advanced-img-sample:build:production"
             },
             "development": {
-              "browserTarget": "ngx-advanced-img-sample:build:development"
+              "buildTarget": "ngx-advanced-img-sample:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -79,7 +79,7 @@
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "browserTarget": "ngx-advanced-img-sample:build"
+            "buildTarget": "ngx-advanced-img-sample:build"
           }
         },
         "test": {
