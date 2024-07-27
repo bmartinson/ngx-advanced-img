@@ -631,8 +631,6 @@ export class NgxAdvancedImgBitmap {
       throw new Error('Invalid compression params.');
     }
 
-    console.warn('resize with', resizeFactor);
-
     // draw the image to the canvas
     let canvas: HTMLCanvasElement | null = document.createElement('canvas');
     canvas.width = this.image.width * resizeFactor;
@@ -649,7 +647,7 @@ export class NgxAdvancedImgBitmap {
     );
 
     // if we haven't loaded anonymously, we'll taint the canvas and crash the application
-    let dataUri: string = canvas.toDataURL(type);
+    let dataUri: string = canvas.toDataURL(type, quality);
 
     const domURL: any = URL || webkitURL || window.URL;
     let objectURL = '';
@@ -675,6 +673,8 @@ export class NgxAdvancedImgBitmap {
       const head: string = `data:${type};base64,`;
       const fileSize: number = Math.round(atob(dataUri.substring(head.length)).length * (4 / 3));
 
+      console.warn('Image Compression Factors:', quality, resizeFactor, fileSize);
+
       if (fileSize > sizeLimit) {
 
         if (resizeFactor === undefined) {
@@ -686,7 +686,7 @@ export class NgxAdvancedImgBitmap {
           throw new Error('Invalid resize factor reached (<= 0)');
         }
 
-        if (quality > 0.8) {
+        if (quality > 0.5) {
           // if the quality is too high, reduce it and try again
           return this.compress(quality - 0.05, type, resizeFactor, sizeLimit);
         }
