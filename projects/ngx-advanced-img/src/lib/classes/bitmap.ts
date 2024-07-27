@@ -669,7 +669,7 @@ export class NgxAdvancedImgBitmap {
       console.error('An error occurred while drawing to the canvas');
     }
 
-    if (typeof sizeLimit === 'number' && !isNaN(sizeLimit) && isFinite(sizeLimit) && sizeLimit > 0) {
+    if (typeof sizeLimit === 'number' && !isNaN(sizeLimit) && isFinite(sizeLimit) && sizeLimit * (4 / 3) > 0) {
       const head: string = `data:${type};base64,`;
       const fileSize: number = Math.round(atob(dataUri.substring(head.length)).length * (4 / 3));
 
@@ -688,11 +688,11 @@ export class NgxAdvancedImgBitmap {
 
         if (quality > 0.5) {
           // if the quality is too high, reduce it and try again
-          return this.compress(quality - 0.05, type, resizeFactor, sizeLimit);
+          return this.compress(quality - 0.025, type, resizeFactor, sizeLimit);
         }
 
         // we've reduced quality, let's reduce image size
-        return this.compress(quality, type, resizeFactor - 0.05, sizeLimit);
+        return this.compress(quality, type, resizeFactor - 0.025, sizeLimit);
       }
     }
 
