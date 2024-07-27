@@ -11,7 +11,6 @@ Angular attribute directives suite that provides various HTML img feature extens
   - [Directives](#directives)
     - [ngxAdvancedImgFallback](#ngxadvancedimgfallback)
   - [Helper Classes](#helper-classes)
-    - [ImageCompressor](#imagecompressor)
 
 ## About This Package
 This package was built to provide easy to use feature directives that are meant to be used with HTML img tags. The first two features being created are fallback image loading and progressive image loading and caching.
@@ -53,7 +52,3 @@ This directive extends HTML img nodes to provide some special fallback loading f
 ## Helper Classes
 
 These classes require not import of the module, but you can import the classes directly into your source code.
-
-### ImageCompressor
-
-This class uses standard HTML5 techniques to provide an easy API for compressing or resizing images and producing new file output for consumption. This can be a crucial piece of code when dealing with client-side optimization for efficient network traffic.
