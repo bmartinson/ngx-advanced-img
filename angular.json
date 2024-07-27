@@ -20,6 +20,10 @@
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
           "options": {
+            "allowedCommonJsDependencies": [
+              "@xmldom/xmldom",
+              "mime"
+            ],
             "outputPath": "dist/ngx-advanced-img-sample",
             "index": "src/index.html",
             "main": "src/main.ts",
