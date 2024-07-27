@@ -9,6 +9,7 @@ import { NgxAdvancedImgBitmap } from '../../projects/ngx-advanced-img/src/public
 export class AppComponent {
 
   public constructor() {
+    // load a cool image
     const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap('https://full.treering.com/P80/364586191.1', '', 0, 0);
     bitmap.load().finally(() => {
       console.log('bitmap loaded with size (B):', bitmap.fileSize);
@@ -19,9 +20,11 @@ export class AppComponent {
       let resizeFactor = 1;
       let url = '';
 
+      // compress the image to a smaller file size
       console.log('[TEST] Quality:', quality, 'Type:', mimeType, 'Size Limit (B):', sizeLimit, 'Resize Factor', resizeFactor);
       url = bitmap.compress(quality, mimeType, resizeFactor, sizeLimit);
 
+      // auto save this for the user
       console.log('[TEST] Saving URL:', url);
       bitmap.saveFile('test', url, mimeType);
     });
