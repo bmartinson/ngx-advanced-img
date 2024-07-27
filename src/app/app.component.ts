@@ -16,7 +16,7 @@ export class AppComponent {
 
       let mimeType: string = 'image/jpeg';
       let quality = 1;
-      let sizeLimit = 6291456; // 6291456 for 6MB -- try 2097152 for 2MB
+      let sizeLimit = 2097152; // 6291456 for 6MB -- try 2097152 for 2MB
       let resizeFactor = 1;
       let url = '';
 

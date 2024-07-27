@@ -686,7 +686,13 @@ export class NgxAdvancedImgBitmap {
           throw new Error('Invalid resize factor reached (<= 0)');
         }
 
-        return this.compress(quality, type, resizeFactor - 0.1, sizeLimit);
+        if (quality > 0.8) {
+          // if the quality is too high, reduce it and try again
+          return this.compress(quality - 0.05, type, resizeFactor, sizeLimit);
+        }
+
+        // we've reduced quality, let's reduce image size
+        return this.compress(quality, type, resizeFactor - 0.05, sizeLimit);
       }
     }
 
