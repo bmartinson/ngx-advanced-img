@@ -628,8 +628,10 @@ export class NgxAdvancedImgBitmap {
       quality < 0 || quality > 1 ||
       (type !== 'image/jpeg' && type !== 'image/png' && type !== 'image/webp')
     ) {
-      return '';
+      throw new Error('Invalid compression params.');
     }
+
+    console.warn('resize with', resizeFactor);
 
     // draw the image to the canvas
     let canvas: HTMLCanvasElement | null = document.createElement('canvas');
@@ -638,11 +640,13 @@ export class NgxAdvancedImgBitmap {
 
     const ctx: CanvasRenderingContext2D | null = canvas?.getContext('2d', { desynchronized: false, willReadFrequently: true });
 
-    if (!resizeFactor) {
-      ctx?.drawImage(this.image, 0, 0);
-    } else {
-      ctx?.drawImage(this.image, 0, 0, this.image.width * resizeFactor, this.image.height * resizeFactor);
-    }
+    ctx?.drawImage(
+      this.image,
+      0,
+      0,
+      this.image.width * resizeFactor,
+      this.image.height * resizeFactor,
+    );
 
     // if we haven't loaded anonymously, we'll taint the canvas and crash the application
     let dataUri: string = canvas.toDataURL(type);
@@ -664,14 +668,14 @@ export class NgxAdvancedImgBitmap {
     }
 
     if (!objectURL) {
-      return '';
+      console.error('An error occurred while drawing to the canvas');
     }
 
     if (typeof sizeLimit === 'number' && !isNaN(sizeLimit) && isFinite(sizeLimit) && sizeLimit > 0) {
       const head: string = `data:${type};base64,`;
       const fileSize: number = Math.round(atob(dataUri.substring(head.length)).length * (4 / 3));
 
-      if (fileSize < sizeLimit) {
+      if (fileSize > sizeLimit) {
 
         if (resizeFactor === undefined) {
           // if the resize factor wasn't supplied set to 1
@@ -679,7 +683,7 @@ export class NgxAdvancedImgBitmap {
         }
 
         if (resizeFactor <= 0) {
-          return '';
+          throw new Error('Invalid resize factor reached (<= 0)');
         }
 
         return this.compress(quality, type, resizeFactor - 0.1, sizeLimit);
