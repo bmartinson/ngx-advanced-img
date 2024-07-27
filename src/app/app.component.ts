@@ -14,14 +14,14 @@ export class AppComponent {
       console.log('bitmap loaded with size (B):', bitmap.fileSize);
 
 
-      let mimeType: string = 'image/png';
+      let mimeType: string = 'image/jpeg';
       let quality = 1;
-      let sizeLimit = 6291456; // 6 MB
-      let resizeFactor = 0.5;
+      let sizeLimit = 6291456; // 6291456 for 6MB -- try 2097152 for 2MB
+      let resizeFactor = 1;
       let url = '';
 
       console.log('[TEST] Quality:', quality, 'Type:', mimeType, 'Size Limit (B):', sizeLimit, 'Resize Factor', resizeFactor);
-      url = bitmap.compress(quality, mimeType)
+      url = bitmap.compress(quality, mimeType, resizeFactor, sizeLimit);
 
       console.log('[TEST] Saving URL:', url);
       bitmap.saveFile('test', url, mimeType);

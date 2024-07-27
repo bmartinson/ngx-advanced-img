@@ -633,8 +633,8 @@ export class NgxAdvancedImgBitmap {
 
     // draw the image to the canvas
     let canvas: HTMLCanvasElement | null = document.createElement('canvas');
-    canvas.width = this.image.width;
-    canvas.height = this.image.height;
+    canvas.width = this.image.width * resizeFactor;
+    canvas.height = this.image.height * resizeFactor;
 
     const ctx: CanvasRenderingContext2D | null = canvas?.getContext('2d', { desynchronized: false, willReadFrequently: true });
 
