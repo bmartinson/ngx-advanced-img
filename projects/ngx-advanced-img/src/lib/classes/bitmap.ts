@@ -669,13 +669,13 @@ export class NgxAdvancedImgBitmap {
       console.error('An error occurred while drawing to the canvas');
     }
 
-    if (typeof sizeLimit === 'number' && !isNaN(sizeLimit) && isFinite(sizeLimit) && sizeLimit * (4 / 3) > 0) {
+    if (typeof sizeLimit === 'number' && !isNaN(sizeLimit) && isFinite(sizeLimit) && sizeLimit > 0) {
       const head: string = `data:${type};base64,`;
       const fileSize: number = Math.round(atob(dataUri.substring(head.length)).length * (4 / 3));
 
       console.warn('Image Compression Factors:', quality, resizeFactor, fileSize);
 
-      if (fileSize > sizeLimit) {
+      if (fileSize > sizeLimit * (4 / 3)) {
 
         if (resizeFactor === undefined) {
           // if the resize factor wasn't supplied set to 1
