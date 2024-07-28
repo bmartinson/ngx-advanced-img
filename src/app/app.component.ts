@@ -22,18 +22,18 @@ export class AppComponent {
       // compress the image to a smaller file size
       console.log('[TEST] Quality:', quality, 'Type:', bitmap.mimeType, 'Size Limit (B):', sizeLimit, 'Resize Factor', resizeFactor);
 
-      performance.mark('jpgCompression_start');
+      performance.mark('compression_start');
       bitmap.compress(quality, bitmap.mimeType, resizeFactor, sizeLimit).then((url: string) => {
-        performance.mark('jpgCompression_end');
-        performance.measure('Image Compression', 'jpgCompression_start', 'jpgCompression_end');
+        performance.mark('compression_end');
+        performance.measure('Image Compression', 'compression_start', 'compression_end');
 
         // auto save this for the user
         console.log('[TEST] Saving URL:', url);
 
-        performance.mark('jpgSave_start');
+        performance.mark('save_start');
         bitmap.saveFile('test', url, bitmap.mimeType);
-        performance.mark('jpgSave_end');
-        performance.measure('Image Saving', 'jpgSave_start', 'jpgSave_end');
+        performance.mark('save_end');
+        performance.measure('Image Saving', 'save_start', 'save_end');
 
         const compressionMeasure = performance.getEntriesByName('Image Compression')[0];
         const saveMeasure = performance.getEntriesByName('Image Saving')[0];
