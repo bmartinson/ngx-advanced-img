@@ -16,7 +16,7 @@ export class AppComponent {
 
       let mimeType: string = 'image/webp';
       let quality = 1;
-      let sizeLimit = 1024000; // 6291456 for 6MB -- try 2097152 for 2MB -- try 3355443.2 for 3.2MB
+      let sizeLimit = 2097152; // 6291456 for 6MB -- try 2097152 for 2MB -- try 3355443.2 for 3.2MB
       let resizeFactor = 1;
 
       // compress the image to a smaller file size
