@@ -22,11 +22,11 @@ export class AppComponent {
 
       // compress the image to a smaller file size
       console.log('[TEST] Quality:', quality, 'Type:', mimeType, 'Size Limit (B):', sizeLimit, 'Resize Factor', resizeFactor);
-      url = bitmap.compress(quality, mimeType, resizeFactor, sizeLimit);
-
-      // auto save this for the user
-      console.log('[TEST] Saving URL:', url);
-      bitmap.saveFile('test', url, mimeType);
+      bitmap.compress(quality, mimeType, resizeFactor, sizeLimit).then((url: string) => {
+        // auto save this for the user
+        console.log('[TEST] Saving URL:', url);
+        bitmap.saveFile('test', url, mimeType);
+      }); // let the errors bubble up
     });
   }
 

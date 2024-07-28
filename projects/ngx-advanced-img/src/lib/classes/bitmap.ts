@@ -621,83 +621,93 @@ export class NgxAdvancedImgBitmap {
    * @param resizeFactor The scaling factor to reduce the size of the image.
    * @param sizeLimit The maximum size of the image in bytes, if exceeded, the image will be compressed further.
    */
-  public compress(quality: number, type: string, resizeFactor: number = 1, sizeLimit?: number): string {
-    if (
-      !this.image ||
-      !this.loaded ||
-      quality < 0 || quality > 1 ||
-      (type !== 'image/jpeg' && type !== 'image/png' && type !== 'image/webp')
-    ) {
-      throw new Error('Invalid compression params.');
-    }
-
-    // draw the image to the canvas
-    let canvas: HTMLCanvasElement | null = document.createElement('canvas');
-    canvas.width = this.image.width * resizeFactor;
-    canvas.height = this.image.height * resizeFactor;
-
-    const ctx: CanvasRenderingContext2D | null = canvas?.getContext('2d', { desynchronized: false, willReadFrequently: true });
-
-    ctx?.drawImage(
-      this.image,
-      0,
-      0,
-      this.image.width * resizeFactor,
-      this.image.height * resizeFactor,
-    );
-
-    // if we haven't loaded anonymously, we'll taint the canvas and crash the application
-    let dataUri: string = canvas.toDataURL(type, quality);
-
-    const domURL: any = URL || webkitURL || window.URL;
-    let objectURL = '';
-
-    // if we got the bitmap data, create the link to download and invoke it
-    if (dataUri) {
-      // get the bitmap data
-      objectURL = domURL.createObjectURL(NgxAdvancedImgBitmap.dataURItoBlob(dataUri));
-    }
-
-    // clean up the canvas
-    if (canvas) {
-      ctx?.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      canvas.width = canvas.height = 0;
-      canvas = null;
-    }
-
-    if (!objectURL) {
-      console.error('An error occurred while drawing to the canvas');
-    }
-
-    if (typeof sizeLimit === 'number' && !isNaN(sizeLimit) && isFinite(sizeLimit) && sizeLimit > 0) {
-      const head: string = `data:${type};base64,`;
-      const fileSize: number = Math.round(atob(dataUri.substring(head.length)).length * (4 / 3));
-
-      console.warn('Image Compression Factors:', quality, resizeFactor, fileSize);
-
-      if (fileSize > sizeLimit * (4 / 3)) {
-
-        if (resizeFactor === undefined) {
-          // if the resize factor wasn't supplied set to 1
-          resizeFactor = 1;
-        }
-
-        if (resizeFactor <= 0) {
-          throw new Error('Invalid resize factor reached (<= 0)');
-        }
-
-        if (quality > 0.5) {
-          // if the quality is too high, reduce it and try again
-          return this.compress(quality - 0.025, type, resizeFactor, sizeLimit);
-        }
-
-        // we've reduced quality, let's reduce image size
-        return this.compress(quality, type, resizeFactor - 0.025, sizeLimit);
+  public async compress(quality: number, type: string, resizeFactor: number = 1, sizeLimit?: number | undefined): Promise<string> {
+    return new Promise((resolve: (value: string) => void) => {
+      if (
+        !this.image ||
+        !this.loaded ||
+        quality < 0 || quality > 1 ||
+        (type !== 'image/jpeg' && type !== 'image/png' && type !== 'image/webp')
+      ) {
+        throw new Error('Invalid compression params.');
       }
-    }
 
+      // draw the image to the canvas
+      let canvas: HTMLCanvasElement | null = document.createElement('canvas');
+      canvas.width = this.image.width * resizeFactor;
+      canvas.height = this.image.height * resizeFactor;
 
-    return objectURL;
+      const ctx: CanvasRenderingContext2D | null = canvas?.getContext('2d', { desynchronized: false, willReadFrequently: true });
+
+      ctx?.drawImage(
+        this.image,
+        0,
+        0,
+        this.image.width * resizeFactor,
+        this.image.height * resizeFactor,
+      );
+
+      // if we haven't loaded anonymously, we'll taint the canvas and crash the application
+      let dataUri: string = canvas.toDataURL(type, quality);
+
+      const domURL: any = URL || webkitURL || window.URL;
+      let objectURL = '';
+
+      // if we got the bitmap data, create the link to download and invoke it
+      if (dataUri) {
+        // get the bitmap data
+        objectURL = domURL.createObjectURL(NgxAdvancedImgBitmap.dataURItoBlob(dataUri));
+        // for webp let's do the toBlob method
+        // console.warn('objectURL', objectURL);
+        // canvas.toBlob((blob: Blob | null) => {
+        //   console.warn('blob output:', blob);
+        // });
+      }
+
+      // clean up the canvas
+      if (canvas) {
+        ctx?.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        canvas.width = canvas.height = 0;
+        canvas = null;
+      }
+
+      if (!objectURL) {
+        console.error('An error occurred while drawing to the canvas');
+      }
+
+      if (typeof sizeLimit === 'number' && !isNaN(sizeLimit) && isFinite(sizeLimit) && sizeLimit > 0) {
+        const head: string = `data:${type};base64,`;
+        const fileSize: number = Math.round(atob(dataUri.substring(head.length)).length * (4 / 3));
+
+        console.warn('Image Compression Factors:', quality, resizeFactor, fileSize);
+
+        if (fileSize > sizeLimit * (4 / 3)) {
+
+          if (resizeFactor === undefined) {
+            // if the resize factor wasn't supplied set to 1
+            resizeFactor = 1;
+          }
+
+          if (resizeFactor <= 0) {
+            throw new Error('Invalid resize factor reached (<= 0)');
+          }
+
+          if (quality > 0.5) {
+            // if the quality is too high, reduce it and try again
+            this.compress(quality - 0.025, type, resizeFactor, sizeLimit).then((url: string) => resolve(url));
+
+            return;
+          }
+
+          // we've reduced quality, let's reduce image size
+          this.compress(quality, type, resizeFactor - 0.025, sizeLimit).then((url: string) => resolve(url));
+
+          return;
+        }
+      }
+
+      resolve(objectURL);
+    });
   }
 
   /**
