@@ -657,11 +657,6 @@ export class NgxAdvancedImgBitmap {
       if (dataUri) {
         // get the bitmap data
         objectURL = domURL.createObjectURL(NgxAdvancedImgBitmap.dataURItoBlob(dataUri));
-        // for webp let's do the toBlob method
-        // console.warn('objectURL', objectURL);
-        // canvas.toBlob((blob: Blob | null) => {
-        //   console.warn('blob output:', blob);
-        // });
       }
 
       // clean up the canvas
