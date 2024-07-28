@@ -426,7 +426,7 @@ export class NgxAdvancedImgBitmap {
               this.size = this.image.naturalWidth * this.image.naturalHeight;
 
               const head: string = `data:${this._mimeType};base64,`;
-              this._fileSize = Math.round(atob(dataUri.substring(head.length)).length * (4 / 3));
+              this._fileSize = Math.round(atob(dataUri.substring(head.length)).length);
 
               // track the time at which this asset was first asked to load
               this.loadedAt = new Date();
@@ -626,8 +626,7 @@ export class NgxAdvancedImgBitmap {
       if (
         !this.image ||
         !this.loaded ||
-        quality < 0 || quality > 1 ||
-        (type !== 'image/jpeg' && type !== 'image/png' && type !== 'image/webp')
+        quality < 0 || quality > 1
       ) {
         throw new Error('Invalid compression params.');
       }
@@ -672,11 +671,11 @@ export class NgxAdvancedImgBitmap {
 
       if (typeof sizeLimit === 'number' && !isNaN(sizeLimit) && isFinite(sizeLimit) && sizeLimit > 0) {
         const head: string = `data:${type};base64,`;
-        const fileSize: number = Math.round(atob(dataUri.substring(head.length)).length * (4 / 3));
+        const fileSize: number = Math.round(atob(dataUri.substring(head.length)).length);
 
-        console.warn('Image Compression Factors:', quality, resizeFactor, fileSize);
+        console.warn('Image Compression Factors:', quality, resizeFactor, `${fileSize} B`);
 
-        if (fileSize > sizeLimit * (4 / 3)) {
+        if (fileSize > sizeLimit) {
 
           if (resizeFactor === undefined) {
             // if the resize factor wasn't supplied set to 1
@@ -687,9 +686,9 @@ export class NgxAdvancedImgBitmap {
             throw new Error('Invalid resize factor reached (<= 0)');
           }
 
-          if (quality > 0.5) {
+          if (quality > 0.1) {
             // if the quality is too high, reduce it and try again
-            this.compress(quality - 0.025, type, resizeFactor, sizeLimit).then((url: string) => resolve(url));
+            this.compress(quality - ((1.65 / (sizeLimit / fileSize) * 0.025)), type, resizeFactor, sizeLimit).then((url: string) => resolve(url));
 
             return;
           }
