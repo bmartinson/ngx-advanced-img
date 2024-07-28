@@ -14,7 +14,6 @@ export class AppComponent {
     bitmap.load().finally(() => {
       console.log('bitmap loaded with size (B):', bitmap.fileSize);
 
-      let mimeType: string = 'image/webp';
       let quality = 1;
       let sizeLimit = 2097152; // 6291456 for 6MB -- try 2097152 for 2MB -- try 3355443.2 for 3.2MB
       let resizeFactor = 1;
