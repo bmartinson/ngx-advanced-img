@@ -50,6 +50,7 @@ export class AppComponent {
     // Implement image processing logic here
     console.log('Processing image with scale:', this.scale, 'and quality:', this.quality);
     const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(this.imageFile, '', 0, 0);
+    bitmap.debug = true;
 
     bitmap.load().finally(() => {
       console.log('bitmap loaded with size (B):', bitmap.fileSize);
