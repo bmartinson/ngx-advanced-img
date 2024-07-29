@@ -52,52 +52,43 @@ export class AppComponent {
     const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(this.imageFile, '', 0, 0);
     bitmap.debug = true;
 
-    bitmap.load().finally(() => {
-      console.log('bitmap loaded with size (B):', bitmap.fileSize);
+    NgxAdvancedImgBitmap.getImageDataFromBlob(this.imageFile as Blob).then((data: INgxAdvancedImgBitmapInfo) => {
+      if (data.fileSize > this.size) {
+        bitmap.load().finally(() => {
+          console.log('bitmap loaded with size (B):', bitmap.fileSize);
 
-      // compress the image to a smaller file size
-      console.log(
-        '[TEST] Quality:', this.quality,
-        'Type:', bitmap.mimeType,
-        'Initial Size (B):', bitmap.initialFileSize,
-        'Loaded File Size (B):', bitmap.fileSize,
-        'Size Limit (B):', this.size,
-        'Dimension Limit (pixels):', this.maxDimension,
-        'Resize Factor', this.scale / 100
-      );
+          // compress the image to a smaller file size
+          console.log(
+            '[TEST] Quality:', this.quality,
+            'Type:', bitmap.mimeType,
+            'Initial Size (B):', bitmap.initialFileSize,
+            'Loaded File Size (B):', bitmap.fileSize,
+            'Size Limit (B):', this.size,
+            'Dimension Limit (pixels):', this.maxDimension,
+            'Resize Factor', this.scale / 100
+          );
 
-      const doCompression: () => void = () => {
-        performance.mark('compression_start');
-        bitmap.compress(+this.quality, bitmap.mimeType, +this.scale / 100, +this.maxDimension, this.size ? +this.size : undefined).then((data: INgxAdvancedImgBitmapCompression) => {
-          performance.mark('compression_end');
-          performance.measure('Image Compression', 'compression_start', 'compression_end');
+          performance.mark('compression_start');
+          bitmap.compress(+this.quality, bitmap.mimeType, +this.scale / 100, +this.maxDimension, this.size ? +this.size : undefined).then((data: INgxAdvancedImgBitmapCompression) => {
+            performance.mark('compression_end');
+            performance.measure('Image Compression', 'compression_start', 'compression_end');
 
-          // auto save this for the user
-          console.log('[TEST] Saving URL:', data.objectURL, data.exifData);
+            // auto save this for the user
+            console.log('[TEST] Saving URL:', data.objectURL, data.exifData);
 
-          performance.mark('save_start');
-          bitmap.saveFile('test', data.objectURL, bitmap.mimeType);
-          performance.mark('save_end');
-          performance.measure('Image Saving', 'save_start', 'save_end');
+            performance.mark('save_start');
+            bitmap.saveFile('test', data.objectURL, bitmap.mimeType);
+            performance.mark('save_end');
+            performance.measure('Image Saving', 'save_start', 'save_end');
 
-          const compressionMeasure = performance.getEntriesByName('Image Compression')[0];
-          const saveMeasure = performance.getEntriesByName('Image Saving')[0];
-          console.log(`${bitmap.mimeType} compression took ${compressionMeasure.duration} ms`);
-          console.log(`${bitmap.mimeType} saving took ${saveMeasure.duration} ms`);
-        }); // let the errors bubble up
-      };
-
-      if (this.size > 0) {
-        // check to see if the file is already smaller than the target size
-        NgxAdvancedImgBitmap.getImageDataFromBlob(this.imageFile as Blob).then((data: INgxAdvancedImgBitmapInfo) => {
-          if (data.fileSize > this.size) {
-            doCompression();
-          } else {
-            console.warn('~~~ No compression is needed, your file is already small enough!');
-          }
+            const compressionMeasure = performance.getEntriesByName('Image Compression')[0];
+            const saveMeasure = performance.getEntriesByName('Image Saving')[0];
+            console.log(`${bitmap.mimeType} compression took ${compressionMeasure.duration} ms`);
+            console.log(`${bitmap.mimeType} saving took ${saveMeasure.duration} ms`);
+          }); // let the errors bubble up
         });
       } else {
-        doCompression();
+        console.warn('~~~ No compression is needed, your file is already small enough!');
       }
     });
   }
