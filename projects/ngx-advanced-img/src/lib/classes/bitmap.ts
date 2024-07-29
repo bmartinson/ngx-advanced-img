@@ -709,8 +709,8 @@ export class NgxAdvancedImgBitmap {
 
       // draw the image to the canvas
       let canvas: HTMLCanvasElement | null = document.createElement('canvas');
-      canvas.width = this.image.width * resizeFactor;
-      canvas.height = this.image.height * resizeFactor;
+      let width: number = canvas.width = this.image.width * resizeFactor;
+      let height: number = canvas.height = this.image.height * resizeFactor;
 
       // scale the image down based on the max allowed pixel dimension
       if (
@@ -796,9 +796,14 @@ export class NgxAdvancedImgBitmap {
         }
       }
 
+      const exifData: any = JSON.parse(JSON.stringify(this.exifData));
+
+      exifData['ExifImageWidth'] = width;
+      exifData['ExifImageHeight'] = height;
+
       resolve({
         objectURL,
-        exifData: this.exifData,
+        exifData,
       } as INgxAdvancedImgBitmapCompression);
     });
   }
