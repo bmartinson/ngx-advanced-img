@@ -11,7 +11,8 @@ export class AppComponent {
   public imageFile: File | null = null;
   public scale: number = 100;
   public quality: number = 1;
-  public size: number | undefined;
+  public size: number = 2097152;
+  public maxDimension: number = 16384;
 
   public constructor() {
   }
@@ -36,6 +37,10 @@ export class AppComponent {
     this.size = event.target.value;
   }
 
+  public onMaxDimensionChange(event: any): void {
+    this.maxDimension = event.target.value;
+  }
+
   public processImage(): void {
     if (!this.imageFile) {
       console.error('No image file selected.');
@@ -50,10 +55,17 @@ export class AppComponent {
       console.log('bitmap loaded with size (B):', bitmap.fileSize);
 
       // compress the image to a smaller file size
-      console.log('[TEST] Quality:', this.quality, 'Type:', bitmap.mimeType, 'Size Limit (B):', this.size, 'Resize Factor', this.scale / 100);
+      console.log(
+        '[TEST] Quality:', this.quality,
+        'Type:', bitmap.mimeType,
+        'Initial Size (B):', bitmap.initialFileSize,
+        'Loaded File Size (B):', bitmap.fileSize,
+        'Size Limit (B):', this.size,
+        'Resize Factor', this.scale / 100
+      );
 
       performance.mark('compression_start');
-      bitmap.compress(+this.quality, bitmap.mimeType, +this.scale / 100, this.size ? +this.size : undefined).then((data: INgxAdvancedImgBitmapCompression) => {
+      bitmap.compress(+this.quality, bitmap.mimeType, +this.scale / 100, +this.maxDimension, this.size ? +this.size : undefined).then((data: INgxAdvancedImgBitmapCompression) => {
         performance.mark('compression_end');
         performance.measure('Image Compression', 'compression_start', 'compression_end');
 

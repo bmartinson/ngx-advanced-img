@@ -41,6 +41,7 @@ export class NgxAdvancedImgBitmap {
   private _mimeType: string;
   private _orientation: number;
   private _fileSize: number;
+  private _initialFileSize: number;
 
   /**
    * The object URL format of the image that can be used for direct downloading to an end-user's machine.
@@ -68,6 +69,13 @@ export class NgxAdvancedImgBitmap {
    */
   public get fileSize(): number {
     return this._fileSize;
+  }
+
+  /**
+   * The size of the file before it was inflated as part of the bitmap loading process using base64 data.
+   */
+  public get initialFileSize(): number {
+    return this._initialFileSize;
   }
 
   /**
@@ -191,7 +199,7 @@ export class NgxAdvancedImgBitmap {
     this._orientation = 1;
     this._mimeType = 'unknown';
     this._objectURL = '';
-    this._fileSize = 0;
+    this._fileSize = this._initialFileSize = 0;
   }
 
   /**
@@ -364,6 +372,9 @@ export class NgxAdvancedImgBitmap {
           if (!this.image) {
             reject(this);
           }
+
+          // store the blob's file size
+          this._initialFileSize = blobData.size;
 
           // if we have an expiration clock ticking, clear it
           if (this.expirationClock) {
@@ -580,6 +591,9 @@ export class NgxAdvancedImgBitmap {
       } else {
         this.image.src = url = URL.createObjectURL(this.src);
 
+        // store the original blob file size
+        this._initialFileSize = this.src.size;
+
         // parse the exif data direction while the image content loads
         exif.parse(this.src, true).then((exifData: any) => {
           this._exifData = exifData;
@@ -645,9 +659,16 @@ export class NgxAdvancedImgBitmap {
    * @param quality The quality of the image compression.
    * @param type The type of file output we would like to generate.
    * @param resizeFactor The scaling factor to reduce the size of the image.
+   * @param maxDimension If provided, the maximum pixels allowed for x/y dimension in the size of the image.
    * @param sizeLimit The maximum size of the image in bytes, if exceeded, the image will be compressed further.
    */
-  public async compress(quality: number, type: string, resizeFactor: number = 1, sizeLimit?: number | undefined): Promise<INgxAdvancedImgBitmapCompression> {
+  public async compress(
+    quality: number,
+    type: string,
+    resizeFactor: number = 1,
+    maxDimension?: number | undefined, // 16,384 is a reasonable safe limit for most browsers
+    sizeLimit?: number | undefined
+  ): Promise<INgxAdvancedImgBitmapCompression> {
     return new Promise((resolve: (value: INgxAdvancedImgBitmapCompression) => void) => {
       if (
         !this.image ||
@@ -657,7 +678,7 @@ export class NgxAdvancedImgBitmap {
       }
 
       if (quality < 0 || quality > 1) {
-        throw new Error('Invalid compression params');
+        throw new Error('The requested image compression cannot be achieved');
       }
 
       // draw the image to the canvas
@@ -665,14 +686,32 @@ export class NgxAdvancedImgBitmap {
       canvas.width = this.image.width * resizeFactor;
       canvas.height = this.image.height * resizeFactor;
 
+      // scale the image down based on the max allowed pixel dimension
+      if (
+        typeof maxDimension === 'number' &&
+        !isNaN(maxDimension) &&
+        isFinite(maxDimension) &&
+        maxDimension > 0
+      ) {
+        if (canvas.width > maxDimension) {
+          canvas.height = canvas.height * (maxDimension / canvas.width);
+          canvas.width = maxDimension;
+        }
+
+        if (canvas.height > maxDimension) {
+          canvas.width = canvas.width * (maxDimension / canvas.height);
+          canvas.height = maxDimension;
+        }
+      }
+
       const ctx: CanvasRenderingContext2D | null = canvas?.getContext('2d', { desynchronized: false, willReadFrequently: true });
 
       ctx?.drawImage(
         this.image,
         0,
         0,
-        this.image.width * resizeFactor,
-        this.image.height * resizeFactor,
+        canvas.width,
+        canvas.height * resizeFactor,
       );
 
       // if we haven't loaded anonymously, we'll taint the canvas and crash the application

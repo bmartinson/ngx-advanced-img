@@ -28,7 +28,7 @@
              min="0"
              max="100"
              step="1"
-             value="100"
+             [value]="scale"
              (input)="onScaleChange($event)">
     </div>
     <div>
@@ -38,7 +38,7 @@
              min="0"
              max="1"
              step="0.01"
-             value="1"
+             [value]="quality"
              (input)="onQualityChange($event)">
     </div>
     <div>
@@ -47,8 +47,17 @@
              id="sizeInput"
              min="1"
              step="0.01"
-             value="2097152"
+             [value]="size"
              (input)="onSizeChange($event)">
+    </div>
+    <div>
+      <label for="maxDimensionInput">Size Limit (B):</label>
+      <input type="number"
+             id="maxDimensionInput"
+             min="1"
+             step="1"
+             [value]="maxDimension"
+             (input)="onMaxDimensionChange($event)">
     </div>
     <div>
       <button type="button"
