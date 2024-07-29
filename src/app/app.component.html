@@ -60,6 +60,13 @@
              (input)="onMaxDimensionChange($event)">
     </div>
     <div>
+      <label for="strictModeInput">Use Strict Mode (inability to reach size fails, more aggressive compression):</label>
+      <input type="checkbox"
+             id="strictModeInput"
+             [value]="strictMode"
+             (change)="onStrictModeChange($event)">
+    </div>
+    <div>
       <button type="button"
               id="processButton"
               (click)="processImage()">Download Image</button>

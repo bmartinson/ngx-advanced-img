@@ -13,6 +13,7 @@ export class AppComponent {
   public quality: number = 1;
   public size: number = 2097152;
   public maxDimension: number = 16384;
+  public strictMode: boolean = true;
 
   public constructor() {
   }
@@ -41,6 +42,10 @@ export class AppComponent {
     this.maxDimension = +event.target.value;
   }
 
+  public onStrictModeChange(event: any): void {
+    this.strictMode = !!event.target.checked;
+  }
+
   public processImage(): void {
     if (!this.imageFile) {
       console.error('No image file selected.');
@@ -65,11 +70,12 @@ export class AppComponent {
             'Loaded File Size (B):', bitmap.fileSize,
             'Size Limit (B):', this.size,
             'Dimension Limit (pixels):', this.maxDimension,
-            'Resize Factor', this.scale / 100
+            'Resize Factor', this.scale / 100,
+            'Strict Mode:', !!this.strictMode,
           );
 
           performance.mark('compression_start');
-          bitmap.compress(+this.quality, bitmap.mimeType, +this.scale / 100, +this.maxDimension, this.size ? +this.size : undefined).then((data: INgxAdvancedImgBitmapCompression) => {
+          bitmap.compress(+this.quality, bitmap.mimeType, +this.scale / 100, +this.maxDimension, this.size ? +this.size : undefined, !!this.strictMode).then((data: INgxAdvancedImgBitmapCompression) => {
             performance.mark('compression_end');
             performance.measure('Image Compression', 'compression_start', 'compression_end');
 

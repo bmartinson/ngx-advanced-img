@@ -31,6 +31,12 @@ export interface INgxAdvancedImgBitmapInfo {
 
 export class NgxAdvancedImgBitmap {
 
+  private static STRICT_QUALITY_FLOOR = 0.1;
+  private static QUALITY_FLOOR = 0.8;
+  private static SCALE_FLOOR = 0.5;
+  private static ITERATION_FACTOR = 0.025;
+  private static QUALITY_FACTOR = 1.65;
+
   public resolution: NgxAdvancedImgResolution;
   public src: string | Blob;
   public revision: number;
@@ -687,14 +693,21 @@ export class NgxAdvancedImgBitmap {
    * @param resizeFactor The scaling factor to reduce the size of the image.
    * @param maxDimension If provided, the maximum pixels allowed for x/y dimension in the size of the image.
    * @param sizeLimit The maximum size of the image in bytes, if exceeded, the image will be compressed further.
+   * @param strict If strict is set to true, then the image compression will be more aggressive to meet the size limit and fail if it can't. When off, it will get close.
    */
   public async compress(
     quality: number,
     type: string,
     resizeFactor: number = 1,
     maxDimension?: number | undefined, // 16,384 is a reasonable safe limit for most browsers
-    sizeLimit?: number | undefined
+    sizeLimit?: number | undefined,
+    strict?: boolean,
   ): Promise<INgxAdvancedImgBitmapCompression> {
+    if (typeof strict === 'undefined') {
+      // be strict by default to try and achieve the size limit no matter what
+      strict = true;
+    }
+
     return new Promise((resolve: (value: INgxAdvancedImgBitmapCompression) => void) => {
       if (
         !this.image ||
@@ -782,15 +795,54 @@ export class NgxAdvancedImgBitmap {
             throw new Error('Invalid resize factor reached (<= 0)');
           }
 
-          if (quality > 0.1) {
+          if (!strict) {
+            // base case if we are at our bottom quality and resize factor, resolve
+            if (quality === NgxAdvancedImgBitmap.QUALITY_FLOOR && resizeFactor === NgxAdvancedImgBitmap.SCALE_FLOOR) {
+              const exifData: any = JSON.parse(JSON.stringify(this.exifData));
+
+              exifData['ExifImageWidth'] = width;
+              exifData['ExifImageHeight'] = height;
+
+              resolve({
+                objectURL,
+                exifData,
+              } as INgxAdvancedImgBitmapCompression);
+            }
+
+            // keep quality more reasonable when not strict
+            if (quality > NgxAdvancedImgBitmap.QUALITY_FLOOR) {
+              quality = quality - ((NgxAdvancedImgBitmap.QUALITY_FACTOR / (sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR));
+
+              if (quality < NgxAdvancedImgBitmap.QUALITY_FLOOR) {
+                quality = NgxAdvancedImgBitmap.QUALITY_FLOOR;
+              }
+
+              // if the quality is too high, reduce it and try again
+              this.compress(quality, type, resizeFactor, maxDimension, sizeLimit, strict).then((compression: INgxAdvancedImgBitmapCompression) => resolve(compression));
+
+              return;
+            }
+
+            // we've reduced quality, let's reduce image size
+            resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
+            if (resizeFactor < NgxAdvancedImgBitmap.SCALE_FLOOR) {
+              quality = NgxAdvancedImgBitmap.SCALE_FLOOR;
+            }
+
+            this.compress(quality, type, resizeFactor, maxDimension, sizeLimit, strict).then((compression: INgxAdvancedImgBitmapCompression) => resolve(compression));
+
+            return;
+          }
+
+          if (quality > NgxAdvancedImgBitmap.STRICT_QUALITY_FLOOR) {
             // if the quality is too high, reduce it and try again
-            this.compress(quality - ((1.65 / (sizeLimit / fileSize) * 0.025)), type, resizeFactor, maxDimension, sizeLimit).then((compression: INgxAdvancedImgBitmapCompression) => resolve(compression));
+            this.compress(quality - ((NgxAdvancedImgBitmap.QUALITY_FACTOR / (sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR)), type, resizeFactor, maxDimension, sizeLimit, strict).then((compression: INgxAdvancedImgBitmapCompression) => resolve(compression));
 
             return;
           }
 
           // we've reduced quality, let's reduce image size
-          this.compress(quality, type, resizeFactor - 0.025, maxDimension, sizeLimit).then((compression: INgxAdvancedImgBitmapCompression) => resolve(compression));
+          this.compress(quality, type, resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR, maxDimension, sizeLimit, strict).then((compression: INgxAdvancedImgBitmapCompression) => resolve(compression));
 
           return;
         }
