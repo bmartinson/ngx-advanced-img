@@ -8,25 +8,52 @@ import { INgxAdvancedImgBitmapCompression, NgxAdvancedImgBitmap } from '../../pr
 })
 export class AppComponent {
 
-  public constructor() {
-    // load a cool image
-    // const src = 'https://www.brianmartinson.com/files/ranch.heic'; // heic
-    const src = 'https://full.treering.com/P80/364586191.1'; // jpeg
+  public imageFile: File | null = null;
+  public scale: number = 100;
+  public quality: number = 1;
+  public size: number | undefined;
 
-    const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(src, '', 0, 0);
+  public constructor() {
+  }
+
+  public onFileChange(event: any): void {
+    const file = event.target.files[0];
+
+    if (file) {
+      this.imageFile = file;
+    }
+  }
+
+  public onScaleChange(event: any): void {
+    this.scale = event.target.value;
+  }
+
+  public onQualityChange(event: any): void {
+    this.quality = event.target.value;
+  }
+
+  public onSizeChange(event: any): void {
+    this.size = event.target.value;
+  }
+
+  public processImage(): void {
+    if (!this.imageFile) {
+      console.error('No image file selected.');
+      return;
+    }
+
+    // Implement image processing logic here
+    console.log('Processing image with scale:', this.scale, 'and quality:', this.quality);
+    const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(this.imageFile, '', 0, 0);
+
     bitmap.load().finally(() => {
       console.log('bitmap loaded with size (B):', bitmap.fileSize);
-      bitmap.saveFile('original');
-
-      let quality = 1;
-      let sizeLimit = 2097152; // 6291456 for 6MB -- try 2097152 for 2MB -- try 3355443.2 for 3.2MB
-      let resizeFactor = 1;
 
       // compress the image to a smaller file size
-      console.log('[TEST] Quality:', quality, 'Type:', bitmap.mimeType, 'Size Limit (B):', sizeLimit, 'Resize Factor', resizeFactor);
+      console.log('[TEST] Quality:', this.quality, 'Type:', bitmap.mimeType, 'Size Limit (B):', this.size, 'Resize Factor', this.scale / 100);
 
       performance.mark('compression_start');
-      bitmap.compress(quality, bitmap.mimeType, resizeFactor, sizeLimit).then((data: INgxAdvancedImgBitmapCompression) => {
+      bitmap.compress(+this.quality, bitmap.mimeType, +this.scale / 100, this.size ? +this.size : undefined).then((data: INgxAdvancedImgBitmapCompression) => {
         performance.mark('compression_end');
         performance.measure('Image Compression', 'compression_start', 'compression_end');
 
@@ -44,6 +71,18 @@ export class AppComponent {
         console.log(`${bitmap.mimeType} saving took ${saveMeasure.duration} ms`);
       }); // let the errors bubble up
     });
+  }
+
+  private arrayBufferToBase64(buffer: ArrayBuffer): string {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    let len = bytes.byteLength;
+
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+
+    return window.btoa(binary);
   }
 
 }

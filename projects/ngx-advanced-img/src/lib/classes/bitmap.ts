@@ -12,7 +12,7 @@ export type NgxAdvancedImgResolution = string | '';
  * in raw data format.
  */
 export interface INgxAdvancedImgBitmapDataSignature {
-  src: string;
+  src: string | Blob;
   revision: number;
   resolution: NgxAdvancedImgResolution;
   loaded: boolean;
@@ -27,7 +27,7 @@ export interface INgxAdvancedImgBitmapCompression {
 export class NgxAdvancedImgBitmap {
 
   public resolution: NgxAdvancedImgResolution;
-  public src: string;
+  public src: string | Blob;
   public revision: number;
   public loaded: boolean;
   public image: HTMLImageElement | undefined;
@@ -174,7 +174,7 @@ export class NgxAdvancedImgBitmap {
   }
 
   public constructor(
-    src: string,
+    src: string | Blob,
     resolution: NgxAdvancedImgResolution,
     revision: number,
     ttl?: number,
@@ -333,6 +333,7 @@ export class NgxAdvancedImgBitmap {
       let url: string;
 
       this.image = new Image();
+      this.image.loading = 'eager';
 
       if (anonymous) {
         this.image.crossOrigin = 'anonymous';
@@ -419,10 +420,12 @@ export class NgxAdvancedImgBitmap {
               // if we haven't loaded anonymously, we'll taint the canvas and crash the application
               let dataUri: string = (anonymous) ? canvas.toDataURL(this._mimeType) : '';
 
-              // store the exif data
-              exif.parse(blobData, true).then((exifData: any) => {
-                this._exifData = exifData;
-              });
+              if (typeof this.src === 'string') {
+                // store the exif data
+                exif.parse(blobData, true).then((exifData: any) => {
+                  this._exifData = exifData;
+                });
+              }
 
               // if we got the bitmap data, create the link to download and invoke it
               if (dataUri) {
@@ -551,7 +554,7 @@ export class NgxAdvancedImgBitmap {
 
       // calculate a unique revision signature to ensure we pull the image with the correct CORS headers
       let rev = '';
-      if (this.revision >= 0) {
+      if (this.revision >= 0 && (typeof this.src === 'string' && this.src.indexOf('base64') === -1)) {
         if (this.src.indexOf('?') >= 0) {
           rev = '&rev=' + this.revision;
         } else {
@@ -560,20 +563,28 @@ export class NgxAdvancedImgBitmap {
       }
 
       // create a properly configured url despite protocol - make sure any resolution data is cleared
-      if (this.resolution === '') {
-        // distinct loads should take the direct source url
-        url = this.src;
+      if (typeof this.src === 'string') {
+        if (this.resolution === '') {
+          // distinct loads should take the direct source url
+          url = this.src;
+        } else {
+          // clear resolution information if provided for situations where we intend to use some resolution
+          url = this.src.replace(/_(.*)/g, '');
+        }
+
+        // append resolution and revision information for all scenarios if provided
+        url += this.resolution + rev;
+
+        // load the image
+        this.image.src = url
       } else {
-        // clear resolution information if provided for situations where we intend to use some resolution
-        url = this.src.replace(/_(.*)/g, '');
+        this.image.src = url = URL.createObjectURL(this.src);
+
+        // parse the exif data direction while the image content loads
+        exif.parse(this.src, true).then((exifData: any) => {
+          this._exifData = exifData;
+        });
       }
-
-      // append resolution and revision information for all scenarios if provided
-      url += this.resolution + rev;
-
-      // start loading the image
-      this.image.loading = 'eager';
-      this.image.src = url;
     });
   }
 
