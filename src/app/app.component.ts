@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { INgxAdvancedImgBitmapCompression, INgxAdvancedImgBitmapInfo, NgxAdvancedImgBitmap } from '../../projects/ngx-advanced-img/src/public-api';
+import { INgxAdvancedImgBitmapOptimization, INgxAdvancedImgBitmapInfo, NgxAdvancedImgBitmap } from '../../projects/ngx-advanced-img/src/public-api';
 
 @Component({
   selector: 'ngx-advanced-img-lib-app-root',
@@ -75,7 +75,7 @@ export class AppComponent {
           );
 
           performance.mark('compression_start');
-          bitmap.compress(+this.quality, bitmap.mimeType, +this.scale / 100, +this.maxDimension, this.size ? +this.size : undefined, !!this.strictMode).then((data: INgxAdvancedImgBitmapCompression) => {
+          bitmap.optimize(+this.quality, bitmap.mimeType, +this.scale / 100, +this.maxDimension, this.size ? +this.size : undefined, !!this.strictMode).then((data: INgxAdvancedImgBitmapOptimization) => {
             performance.mark('compression_end');
             performance.measure('Image Compression', 'compression_start', 'compression_end');
 

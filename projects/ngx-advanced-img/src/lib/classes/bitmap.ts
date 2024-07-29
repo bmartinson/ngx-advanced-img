@@ -19,7 +19,7 @@ export interface INgxAdvancedImgBitmapDataSignature {
   size: number;
 }
 
-export interface INgxAdvancedImgBitmapCompression {
+export interface INgxAdvancedImgBitmapOptimization {
   objectURL: any;
   exifData: any;
 }
@@ -685,30 +685,30 @@ export class NgxAdvancedImgBitmap {
   }
 
   /**
-   * If the image is loaded, this function will compress the image to the
+   * If the image is loaded, this function will optimize the image to the
    * desired quality and type and return a data url of bitmap information.
    *
-   * @param quality The quality of the image compression.
+   * @param quality The quality of the image optimization.
    * @param type The type of file output we would like to generate.
    * @param resizeFactor The scaling factor to reduce the size of the image.
    * @param maxDimension If provided, the maximum pixels allowed for x/y dimension in the size of the image.
-   * @param sizeLimit The maximum size of the image in bytes, if exceeded, the image will be compressed further.
-   * @param strict If strict is set to true, then the image compression will be more aggressive to meet the size limit and fail if it can't. When off, it will get close.
+   * @param sizeLimit The maximum size of the image in bytes, if exceeded, the image will be optimized further.
+   * @param strict If strict is set to true, then the image optimization will be more aggressive to meet the size limit and fail if it can't. When off, it will get close.
    */
-  public async compress(
+  public async optimize(
     quality: number,
     type: string,
     resizeFactor: number = 1,
     maxDimension?: number | undefined, // 16,384 is a reasonable safe limit for most browsers
     sizeLimit?: number | undefined,
     strict?: boolean,
-  ): Promise<INgxAdvancedImgBitmapCompression> {
+  ): Promise<INgxAdvancedImgBitmapOptimization> {
     if (typeof strict === 'undefined') {
       // be strict by default to try and achieve the size limit no matter what
       strict = true;
     }
 
-    return new Promise((resolve: (value: INgxAdvancedImgBitmapCompression) => void) => {
+    return new Promise((resolve: (value: INgxAdvancedImgBitmapOptimization) => void) => {
       if (
         !this.image ||
         !this.loaded
@@ -717,7 +717,7 @@ export class NgxAdvancedImgBitmap {
       }
 
       if (quality < 0 || quality > 1) {
-        throw new Error('The requested image compression cannot be achieved');
+        throw new Error('The requested image optimization cannot be achieved');
       }
 
       // draw the image to the canvas
@@ -781,7 +781,7 @@ export class NgxAdvancedImgBitmap {
         const fileSize: number = Math.round(atob(dataUri.substring(head.length)).length);
 
         if (this.debug) {
-          console.warn('Image Compression Factors:', quality, resizeFactor, `${fileSize} B`);
+          console.warn('Image Optimization Factors:', quality, resizeFactor, `${fileSize} B`);
         }
 
         if (fileSize > sizeLimit) {
@@ -806,7 +806,7 @@ export class NgxAdvancedImgBitmap {
               resolve({
                 objectURL,
                 exifData,
-              } as INgxAdvancedImgBitmapCompression);
+              } as INgxAdvancedImgBitmapOptimization);
             }
 
             // keep quality more reasonable when not strict
@@ -818,7 +818,7 @@ export class NgxAdvancedImgBitmap {
               }
 
               // if the quality is too high, reduce it and try again
-              this.compress(quality, type, resizeFactor, maxDimension, sizeLimit, strict).then((compression: INgxAdvancedImgBitmapCompression) => resolve(compression));
+              this.optimize(quality, type, resizeFactor, maxDimension, sizeLimit, strict).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
 
               return;
             }
@@ -829,20 +829,20 @@ export class NgxAdvancedImgBitmap {
               quality = NgxAdvancedImgBitmap.SCALE_FLOOR;
             }
 
-            this.compress(quality, type, resizeFactor, maxDimension, sizeLimit, strict).then((compression: INgxAdvancedImgBitmapCompression) => resolve(compression));
+            this.optimize(quality, type, resizeFactor, maxDimension, sizeLimit, strict).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
 
             return;
           }
 
           if (quality > NgxAdvancedImgBitmap.STRICT_QUALITY_FLOOR) {
             // if the quality is too high, reduce it and try again
-            this.compress(quality - ((NgxAdvancedImgBitmap.QUALITY_FACTOR / (sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR)), type, resizeFactor, maxDimension, sizeLimit, strict).then((compression: INgxAdvancedImgBitmapCompression) => resolve(compression));
+            this.optimize(quality - ((NgxAdvancedImgBitmap.QUALITY_FACTOR / (sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR)), type, resizeFactor, maxDimension, sizeLimit, strict).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
 
             return;
           }
 
           // we've reduced quality, let's reduce image size
-          this.compress(quality, type, resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR, maxDimension, sizeLimit, strict).then((compression: INgxAdvancedImgBitmapCompression) => resolve(compression));
+          this.optimize(quality, type, resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR, maxDimension, sizeLimit, strict).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
 
           return;
         }
@@ -856,7 +856,7 @@ export class NgxAdvancedImgBitmap {
       resolve({
         objectURL,
         exifData,
-      } as INgxAdvancedImgBitmapCompression);
+      } as INgxAdvancedImgBitmapOptimization);
     });
   }
 
