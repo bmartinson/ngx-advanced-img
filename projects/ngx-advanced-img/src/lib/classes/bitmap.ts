@@ -19,6 +19,11 @@ export interface INgxAdvancedImgBitmapDataSignature {
   size: number;
 }
 
+export interface INgxAdvancedImgBitmapCompression {
+  objectURL: any;
+  exifData: any;
+}
+
 export class NgxAdvancedImgBitmap {
 
   public resolution: NgxAdvancedImgResolution;
@@ -32,6 +37,7 @@ export class NgxAdvancedImgBitmap {
   private expirationClock: Timeout | null;
   private _destroyed: Subject<INgxAdvancedImgBitmapDataSignature> | undefined;
   private _objectURL: string;
+  private _exifData: any;
   private _mimeType: string;
   private _orientation: number;
   private _fileSize: number;
@@ -41,6 +47,13 @@ export class NgxAdvancedImgBitmap {
    */
   public get objectURL(): string {
     return this._objectURL;
+  }
+
+  /**
+   * The exif data associated with the image.
+   */
+  public get exifData(): any {
+    return this._exifData;
   }
 
   /**
@@ -394,8 +407,6 @@ export class NgxAdvancedImgBitmap {
               // acquire the rendering context
               const ctx: CanvasRenderingContext2D | null = canvas?.getContext('2d', { desynchronized: false, willReadFrequently: true });
 
-              document.body.appendChild(canvas);
-
               // if the context cannot be acquired, we should quit the operation
               if (!ctx) {
                 onerror();
@@ -408,6 +419,11 @@ export class NgxAdvancedImgBitmap {
               // if we haven't loaded anonymously, we'll taint the canvas and crash the application
               let dataUri: string = (anonymous) ? canvas.toDataURL(this._mimeType) : '';
 
+              // store the exif data
+              exif.parse(blobData, true).then((exifData: any) => {
+                this._exifData = exifData;
+              });
+
               // if we got the bitmap data, create the link to download and invoke it
               if (dataUri) {
                 // get the bitmap data in blob format
@@ -418,7 +434,6 @@ export class NgxAdvancedImgBitmap {
               if (canvas) {
                 ctx?.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
                 canvas.width = canvas.height = 0;
-                document.body.removeChild(canvas);
                 canvas = null;
               }
 
@@ -621,14 +636,17 @@ export class NgxAdvancedImgBitmap {
    * @param resizeFactor The scaling factor to reduce the size of the image.
    * @param sizeLimit The maximum size of the image in bytes, if exceeded, the image will be compressed further.
    */
-  public async compress(quality: number, type: string, resizeFactor: number = 1, sizeLimit?: number | undefined): Promise<string> {
-    return new Promise((resolve: (value: string) => void) => {
+  public async compress(quality: number, type: string, resizeFactor: number = 1, sizeLimit?: number | undefined): Promise<INgxAdvancedImgBitmapCompression> {
+    return new Promise((resolve: (value: INgxAdvancedImgBitmapCompression) => void) => {
       if (
         !this.image ||
-        !this.loaded ||
-        quality < 0 || quality > 1
+        !this.loaded
       ) {
-        throw new Error('Invalid compression params.');
+        throw new Error('Image not loaded');
+      }
+
+      if (quality < 0 || quality > 1) {
+        throw new Error('Invalid compression params');
       }
 
       // draw the image to the canvas
@@ -688,19 +706,22 @@ export class NgxAdvancedImgBitmap {
 
           if (quality > 0.1) {
             // if the quality is too high, reduce it and try again
-            this.compress(quality - ((1.65 / (sizeLimit / fileSize) * 0.025)), type, resizeFactor, sizeLimit).then((url: string) => resolve(url));
+            this.compress(quality - ((1.65 / (sizeLimit / fileSize) * 0.025)), type, resizeFactor, sizeLimit).then((compression: INgxAdvancedImgBitmapCompression) => resolve(compression));
 
             return;
           }
 
           // we've reduced quality, let's reduce image size
-          this.compress(quality, type, resizeFactor - 0.025, sizeLimit).then((url: string) => resolve(url));
+          this.compress(quality, type, resizeFactor - 0.025, sizeLimit).then((compression: INgxAdvancedImgBitmapCompression) => resolve(compression));
 
           return;
         }
       }
 
-      resolve(objectURL);
+      resolve({
+        objectURL,
+        exifData: this.exifData,
+      } as INgxAdvancedImgBitmapCompression);
     });
   }
 
