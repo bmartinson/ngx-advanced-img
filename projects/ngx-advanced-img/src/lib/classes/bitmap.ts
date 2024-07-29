@@ -32,6 +32,7 @@ export class NgxAdvancedImgBitmap {
   public loaded: boolean;
   public image: HTMLImageElement | undefined;
   public size: number;
+  public debug: boolean; // set to true for console logging
   private _ttl: number;	// time to live in seconds after it has been loaded
   private loadedAt: Date | null;
   private expirationClock: Timeout | null;
@@ -200,6 +201,7 @@ export class NgxAdvancedImgBitmap {
     this._mimeType = 'unknown';
     this._objectURL = '';
     this._fileSize = this._initialFileSize = 0;
+    this.debug = false;
   }
 
   /**
@@ -711,7 +713,7 @@ export class NgxAdvancedImgBitmap {
         0,
         0,
         canvas.width,
-        canvas.height * resizeFactor,
+        canvas.height,
       );
 
       // if we haven't loaded anonymously, we'll taint the canvas and crash the application
@@ -734,14 +736,16 @@ export class NgxAdvancedImgBitmap {
       }
 
       if (!objectURL) {
-        console.error('An error occurred while drawing to the canvas');
+        throw new Error('An error occurred while drawing to the canvas');
       }
 
       if (typeof sizeLimit === 'number' && !isNaN(sizeLimit) && isFinite(sizeLimit) && sizeLimit > 0) {
         const head: string = `data:${type};base64,`;
         const fileSize: number = Math.round(atob(dataUri.substring(head.length)).length);
 
-        console.warn('Image Compression Factors:', quality, resizeFactor, `${fileSize} B`);
+        if (this.debug) {
+          console.warn('Image Compression Factors:', quality, resizeFactor, `${fileSize} B`);
+        }
 
         if (fileSize > sizeLimit) {
 
@@ -756,13 +760,13 @@ export class NgxAdvancedImgBitmap {
 
           if (quality > 0.1) {
             // if the quality is too high, reduce it and try again
-            this.compress(quality - ((1.65 / (sizeLimit / fileSize) * 0.025)), type, resizeFactor, sizeLimit).then((compression: INgxAdvancedImgBitmapCompression) => resolve(compression));
+            this.compress(quality - ((1.65 / (sizeLimit / fileSize) * 0.025)), type, resizeFactor, maxDimension, sizeLimit).then((compression: INgxAdvancedImgBitmapCompression) => resolve(compression));
 
             return;
           }
 
           // we've reduced quality, let's reduce image size
-          this.compress(quality, type, resizeFactor - 0.025, sizeLimit).then((compression: INgxAdvancedImgBitmapCompression) => resolve(compression));
+          this.compress(quality, type, resizeFactor - 0.025, maxDimension, sizeLimit).then((compression: INgxAdvancedImgBitmapCompression) => resolve(compression));
 
           return;
         }

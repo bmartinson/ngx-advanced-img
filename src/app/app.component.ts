@@ -26,19 +26,19 @@ export class AppComponent {
   }
 
   public onScaleChange(event: any): void {
-    this.scale = event.target.value;
+    this.scale = +event.target.value;
   }
 
   public onQualityChange(event: any): void {
-    this.quality = event.target.value;
+    this.quality = +event.target.value;
   }
 
   public onSizeChange(event: any): void {
-    this.size = event.target.value;
+    this.size = +event.target.value;
   }
 
   public onMaxDimensionChange(event: any): void {
-    this.maxDimension = event.target.value;
+    this.maxDimension = +event.target.value;
   }
 
   public processImage(): void {
