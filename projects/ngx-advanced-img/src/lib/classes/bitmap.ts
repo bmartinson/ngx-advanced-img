@@ -24,6 +24,11 @@ export interface INgxAdvancedImgBitmapCompression {
   exifData: any;
 }
 
+export interface INgxAdvancedImgBitmapInfo {
+  fileSize: number;
+  exifData: any;
+}
+
 export class NgxAdvancedImgBitmap {
 
   public resolution: NgxAdvancedImgResolution;
@@ -202,6 +207,25 @@ export class NgxAdvancedImgBitmap {
     this._objectURL = '';
     this._fileSize = this._initialFileSize = 0;
     this.debug = false;
+  }
+
+  /**
+   * Standard function for extracting file information from a Blob.
+   *
+   * @param data Blob data that can be assessed.
+   */
+  public static getImageDataFromBlob(data: Blob): Promise<INgxAdvancedImgBitmapInfo> {
+    const fileSize: number = data.size;
+
+    return new Promise((resolve: (value: INgxAdvancedImgBitmapInfo) => void) => {
+      // parse the exif data direction while the image content loads
+      exif.parse(data, true).then((exifData: any) => {
+        resolve({
+          fileSize,
+          exifData,
+        });
+      });
+    });
   }
 
   /**

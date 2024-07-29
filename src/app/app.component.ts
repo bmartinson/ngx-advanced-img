@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { INgxAdvancedImgBitmapCompression, NgxAdvancedImgBitmap } from '../../projects/ngx-advanced-img/src/public-api';
+import { INgxAdvancedImgBitmapCompression, INgxAdvancedImgBitmapInfo, NgxAdvancedImgBitmap } from '../../projects/ngx-advanced-img/src/public-api';
 
 @Component({
   selector: 'ngx-advanced-img-lib-app-root',
@@ -66,24 +66,39 @@ export class AppComponent {
         'Resize Factor', this.scale / 100
       );
 
-      performance.mark('compression_start');
-      bitmap.compress(+this.quality, bitmap.mimeType, +this.scale / 100, +this.maxDimension, this.size ? +this.size : undefined).then((data: INgxAdvancedImgBitmapCompression) => {
-        performance.mark('compression_end');
-        performance.measure('Image Compression', 'compression_start', 'compression_end');
+      const doCompression: () => void = () => {
+        performance.mark('compression_start');
+        bitmap.compress(+this.quality, bitmap.mimeType, +this.scale / 100, +this.maxDimension, this.size ? +this.size : undefined).then((data: INgxAdvancedImgBitmapCompression) => {
+          performance.mark('compression_end');
+          performance.measure('Image Compression', 'compression_start', 'compression_end');
 
-        // auto save this for the user
-        console.log('[TEST] Saving URL:', data.objectURL, data.exifData);
+          // auto save this for the user
+          console.log('[TEST] Saving URL:', data.objectURL, data.exifData);
 
-        performance.mark('save_start');
-        bitmap.saveFile('test', data.objectURL, bitmap.mimeType);
-        performance.mark('save_end');
-        performance.measure('Image Saving', 'save_start', 'save_end');
+          performance.mark('save_start');
+          bitmap.saveFile('test', data.objectURL, bitmap.mimeType);
+          performance.mark('save_end');
+          performance.measure('Image Saving', 'save_start', 'save_end');
 
-        const compressionMeasure = performance.getEntriesByName('Image Compression')[0];
-        const saveMeasure = performance.getEntriesByName('Image Saving')[0];
-        console.log(`${bitmap.mimeType} compression took ${compressionMeasure.duration} ms`);
-        console.log(`${bitmap.mimeType} saving took ${saveMeasure.duration} ms`);
-      }); // let the errors bubble up
+          const compressionMeasure = performance.getEntriesByName('Image Compression')[0];
+          const saveMeasure = performance.getEntriesByName('Image Saving')[0];
+          console.log(`${bitmap.mimeType} compression took ${compressionMeasure.duration} ms`);
+          console.log(`${bitmap.mimeType} saving took ${saveMeasure.duration} ms`);
+        }); // let the errors bubble up
+      };
+
+      if (this.size > 0) {
+        // check to see if the file is already smaller than the target size
+        NgxAdvancedImgBitmap.getImageDataFromBlob(this.imageFile as Blob).then((data: INgxAdvancedImgBitmapInfo) => {
+          if (data.fileSize > this.size) {
+            doCompression();
+          } else {
+            console.warn('~~~ No compression is needed, your file is already small enough!');
+          }
+        });
+      } else {
+        doCompression();
+      }
     });
   }
 
