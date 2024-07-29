@@ -61,6 +61,7 @@ export class AppComponent {
         'Initial Size (B):', bitmap.initialFileSize,
         'Loaded File Size (B):', bitmap.fileSize,
         'Size Limit (B):', this.size,
+        'Dimension Limit (pixels):', this.maxDimension,
         'Resize Factor', this.scale / 100
       );
 
