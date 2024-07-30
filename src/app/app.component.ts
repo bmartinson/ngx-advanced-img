@@ -87,7 +87,7 @@ export class AppComponent {
             console.log('[TEST] Saving URL:', data.objectURL, data.exifData);
 
             performance.mark('save_start');
-            bitmap.saveFile('test', data.objectURL, bitmap.mimeType);
+            bitmap.saveFile(`test_output_${this.mode}_${this.size}`, data.objectURL, bitmap.mimeType);
             performance.mark('save_end');
             performance.measure('Image Saving', 'save_start', 'save_end');
 
