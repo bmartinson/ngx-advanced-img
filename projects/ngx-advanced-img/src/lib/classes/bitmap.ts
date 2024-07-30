@@ -779,6 +779,13 @@ export class NgxAdvancedImgBitmap {
       // if we haven't loaded anonymously, we'll taint the canvas and crash the application
       let dataUri: string = canvas.toDataURL(type, quality);
 
+      // clean up the canvas
+      if (canvas) {
+        ctx?.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        canvas.width = canvas.height = 0;
+        canvas = null;
+      }
+
       const domURL: any = URL || webkitURL || window.URL;
       let objectURL = '';
 
@@ -786,13 +793,6 @@ export class NgxAdvancedImgBitmap {
       if (dataUri) {
         // get the bitmap data
         objectURL = domURL.createObjectURL(NgxAdvancedImgBitmap.dataURItoBlob(dataUri));
-      }
-
-      // clean up the canvas
-      if (canvas) {
-        ctx?.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        canvas.width = canvas.height = 0;
-        canvas = null;
       }
 
       if (!objectURL) {

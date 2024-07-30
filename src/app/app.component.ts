@@ -99,6 +99,9 @@ export class AppComponent {
             // reset performance
             performance.clearMarks();
             performance.clearMeasures();
+
+            // clean up the bitmap
+            bitmap.destroy();
           }); // let the errors bubble up
         });
       } else {
