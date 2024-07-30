@@ -95,6 +95,10 @@ export class AppComponent {
             const saveMeasure = performance.getEntriesByName('Image Saving')[0];
             console.log(`${bitmap.mimeType} compression took ${compressionMeasure.duration} ms`);
             console.log(`${bitmap.mimeType} saving took ${saveMeasure.duration} ms`);
+
+            // reset performance
+            performance.clearMarks();
+            performance.clearMeasures();
           }); // let the errors bubble up
         });
       } else {
