@@ -31,9 +31,6 @@ export interface INgxAdvancedImgBitmapInfo {
 
 export class NgxAdvancedImgBitmap {
 
-  private static STRICT_QUALITY_FLOOR = 0.1;
-  private static QUALITY_FLOOR = 0.8;
-  private static SCALE_FLOOR = 0.5;
   private static ITERATION_FACTOR = 0.025;
   private static QUALITY_FACTOR = 1.65;
 
@@ -693,7 +690,8 @@ export class NgxAdvancedImgBitmap {
    * @param resizeFactor The scaling factor to reduce the size of the image.
    * @param maxDimension If provided, the maximum pixels allowed for x/y dimension in the size of the image.
    * @param sizeLimit The maximum size of the image in bytes, if exceeded, the image will be optimized further.
-   * @param strict If strict is set to true, then the image optimization will be more aggressive to meet the size limit and fail if it can't. When off, it will get close.
+   * @param mode Describes the optimization mode to attempt. Focus on retaining size, quality, or a balance between them all.
+   * @param strict If true, false by default, then the function will throw an error if the size limit cannot be achieved.
    */
   public async optimize(
     quality: number,
@@ -701,13 +699,38 @@ export class NgxAdvancedImgBitmap {
     resizeFactor: number = 1,
     maxDimension?: number | undefined, // 16,384 is a reasonable safe limit for most browsers
     sizeLimit?: number | undefined,
+    mode?: 'retain-quality' | 'retain-size' | 'balanced' | 'hardcore' | undefined,
     strict?: boolean,
   ): Promise<INgxAdvancedImgBitmapOptimization> {
-    if (typeof strict === 'undefined') {
-      // be strict by default to try and achieve the size limit no matter what
-      strict = true;
-    }
+    return this._optimize(quality, type, resizeFactor, maxDimension, sizeLimit, mode, undefined, strict);
+  }
 
+  /**
+   * If the image is loaded, this function will optimize the image to the
+   * desired quality and type and return a data url of bitmap information.
+   *
+   * This is the internal logic to power optimization so that we may recursively
+   * attempt optimizations in balanced and hardcore modes by tracking last op
+   * without showing lastOp for the user of this function.
+   *
+   * @param quality The quality of the image optimization.
+   * @param type The type of file output we would like to generate.
+   * @param resizeFactor The scaling factor to reduce the size of the image.
+   * @param maxDimension If provided, the maximum pixels allowed for x/y dimension in the size of the image.
+   * @param sizeLimit The maximum size of the image in bytes, if exceeded, the image will be optimized further.
+   * @param mode Describes the optimization mode to attempt. Focus on retaining size, quality, or a balance between them all.
+   * @param strict If true, false by default, then the function will throw an error if the size limit cannot be achieved.
+   */
+  private async _optimize(
+    quality: number,
+    type: string,
+    resizeFactor: number = 1,
+    maxDimension?: number | undefined, // 16,384 is a reasonable safe limit for most browsers
+    sizeLimit?: number | undefined,
+    mode?: 'retain-quality' | 'retain-size' | 'balanced' | 'hardcore' | undefined,
+    lastOp?: 'quality' | 'scale' | undefined,
+    strict?: boolean,
+  ): Promise<INgxAdvancedImgBitmapOptimization> {
     return new Promise((resolve: (value: INgxAdvancedImgBitmapOptimization) => void) => {
       if (
         !this.image ||
@@ -781,7 +804,7 @@ export class NgxAdvancedImgBitmap {
         const fileSize: number = Math.round(atob(dataUri.substring(head.length)).length);
 
         if (this.debug) {
-          console.warn('Image Optimization Factors:', quality, resizeFactor, `${fileSize} B`);
+          console.warn('Image Optimization Factors:', mode, quality, resizeFactor, `${fileSize} B`);
         }
 
         if (fileSize > sizeLimit) {
@@ -795,56 +818,145 @@ export class NgxAdvancedImgBitmap {
             throw new Error('Invalid resize factor reached (<= 0)');
           }
 
-          if (!strict) {
-            // base case if we are at our bottom quality and resize factor, resolve
-            if (quality === NgxAdvancedImgBitmap.QUALITY_FLOOR && resizeFactor === NgxAdvancedImgBitmap.SCALE_FLOOR) {
-              const exifData: any = JSON.parse(JSON.stringify(this.exifData));
+          let qualityFloor = 0.8;
+          let scaleFloor = 0.5;
+          let preferredOp: 'retain-size' | 'retain-quality' = 'retain-size';
 
-              exifData['ExifImageWidth'] = width;
-              exifData['ExifImageHeight'] = height;
+          switch (mode) {
+            case 'balanced':
+              if (lastOp === 'quality') {
+                preferredOp = 'retain-size';
+                lastOp = 'scale';
+              } else {
+                preferredOp = 'retain-quality'
+                lastOp = 'quality';
+              }
+              break;
 
-              resolve({
-                objectURL,
-                exifData,
-              } as INgxAdvancedImgBitmapOptimization);
-            }
+            case 'hardcore':
+              // let the compression go as low as possible
+              qualityFloor = 0.025;
+              scaleFloor = 0.025;
 
-            // keep quality more reasonable when not strict
-            if (quality > NgxAdvancedImgBitmap.QUALITY_FLOOR) {
-              quality = quality - ((NgxAdvancedImgBitmap.QUALITY_FACTOR / (sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR));
+              if (lastOp === 'quality') {
+                preferredOp = 'retain-size';
+                lastOp = 'scale';
+              } else {
+                preferredOp = 'retain-quality'
+                lastOp = 'quality';
+              }
+              break;
 
-              if (quality < NgxAdvancedImgBitmap.QUALITY_FLOOR) {
-                quality = NgxAdvancedImgBitmap.QUALITY_FLOOR;
+            case 'retain-size':
+              qualityFloor = 0.025;
+              scaleFloor = 0.025;
+              preferredOp = 'retain-size';
+              lastOp = 'quality';
+              break;
+
+            case 'retain-quality':
+              qualityFloor = 0.025;
+              scaleFloor = 0.025;
+              preferredOp = 'retain-quality';
+              lastOp = 'scale';
+              break;
+          }
+
+          /**
+           * perform the optimization based on the preferred operation
+           */
+
+          switch (preferredOp) {
+            case 'retain-quality':
+              // base case if we are at our bottom quality and resize factor, resolve
+              if (!strict && quality === qualityFloor && resizeFactor === scaleFloor) {
+                const exifData: any = JSON.parse(JSON.stringify(this.exifData));
+
+                exifData['ExifImageWidth'] = width;
+                exifData['ExifImageHeight'] = height;
+
+                resolve({
+                  objectURL,
+                  exifData,
+                } as INgxAdvancedImgBitmapOptimization);
+
+                return;
               }
 
-              // if the quality is too high, reduce it and try again
-              this.optimize(quality, type, resizeFactor, maxDimension, sizeLimit, strict).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
+              if (resizeFactor > scaleFloor) {
+                resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
+
+                if (resizeFactor < scaleFloor) {
+                  // keep it within a given scaling factor
+                  resizeFactor = scaleFloor;
+                }
+
+
+                // if the quality is too high, reduce it and try again
+                this._optimize(quality, type, resizeFactor, maxDimension, sizeLimit, mode, lastOp, strict).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
+
+                return;
+              }
+
+              // we've reduced scale, let's reduce image size
+              if (quality < qualityFloor) {
+                if (strict) {
+                  throw new Error('The requested image optimization cannot be achieved');
+                }
+
+                // keep it within a given quality floor
+                quality = qualityFloor;
+              }
+
+              this._optimize(quality, type, resizeFactor, maxDimension, sizeLimit, mode, lastOp, strict).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
 
               return;
-            }
 
-            // we've reduced quality, let's reduce image size
-            resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
-            if (resizeFactor < NgxAdvancedImgBitmap.SCALE_FLOOR) {
-              quality = NgxAdvancedImgBitmap.SCALE_FLOOR;
-            }
+            case 'retain-size':
+              // base case if we are at our bottom quality and resize factor, resolve
+              if (!strict && quality === qualityFloor && resizeFactor === scaleFloor) {
+                const exifData: any = JSON.parse(JSON.stringify(this.exifData));
 
-            this.optimize(quality, type, resizeFactor, maxDimension, sizeLimit, strict).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
+                exifData['ExifImageWidth'] = width;
+                exifData['ExifImageHeight'] = height;
 
-            return;
+                resolve({
+                  objectURL,
+                  exifData,
+                } as INgxAdvancedImgBitmapOptimization);
+
+                return;
+              }
+
+              if (quality > qualityFloor) {
+                quality = quality - ((NgxAdvancedImgBitmap.QUALITY_FACTOR / (sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR));
+
+                if (quality < qualityFloor) {
+                  // keep it within a given quality floor
+                  quality = qualityFloor;
+                }
+
+                // if the quality is too high, reduce it and try again
+                this._optimize(quality, type, resizeFactor, maxDimension, sizeLimit, mode, lastOp, strict).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
+
+                return;
+              }
+
+              // we've reduced quality, let's reduce image size
+              resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
+              if (resizeFactor < scaleFloor) {
+                if (strict) {
+                  throw new Error('The requested image optimization cannot be achieved');
+                }
+
+                // keep it within a given scaling factor
+                resizeFactor = scaleFloor;
+              }
+
+              this._optimize(quality, type, resizeFactor, maxDimension, sizeLimit, mode, lastOp, strict).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
+
+              return;
           }
-
-          if (quality > NgxAdvancedImgBitmap.STRICT_QUALITY_FLOOR) {
-            // if the quality is too high, reduce it and try again
-            this.optimize(quality - ((NgxAdvancedImgBitmap.QUALITY_FACTOR / (sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR)), type, resizeFactor, maxDimension, sizeLimit, strict).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
-
-            return;
-          }
-
-          // we've reduced quality, let's reduce image size
-          this.optimize(quality, type, resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR, maxDimension, sizeLimit, strict).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
-
-          return;
         }
       }
 

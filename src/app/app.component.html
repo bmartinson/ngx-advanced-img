@@ -59,13 +59,24 @@
              [value]="maxDimension"
              (input)="onMaxDimensionChange($event)">
     </div>
-    <!-- <div>
-      <label for="strictModeInput">Use Strict Mode (inability to reach size fails, more aggressive compression):</label>
+    <div>
+      <label for="optimizationModeInput">Optimization Mode:</label>
+      <select id="optimizationModeInput"
+              [value]="mode"
+              (change)="onModeChange($event)">
+        <option value="retain-size">Retain Size</option>
+        <option value="retain-scale">Retain Scale</option>
+        <option value="balanced">Balanced</option>
+        <option value="hardcore">Hardcore</option>
+      </select>
+    </div>
+    <div>
+      <label for="strictModeInput">Use Strict Mode (fail when size limit cannot be reached):</label>
       <input type="checkbox"
              id="strictModeInput"
              [value]="strictMode"
              (change)="onStrictModeChange($event)">
-    </div> -->
+    </div>
     <div>
       <button type="button"
               id="processButton"

@@ -13,7 +13,8 @@ export class AppComponent {
   public quality: number = 1;
   public size: number = 2097152;
   public maxDimension: number = 16384;
-  public strictMode: boolean = true;
+  public strictMode: boolean = false;
+  public mode: 'retain-size' | 'retain-quality' | 'balanced' | 'hardcore' = 'balanced';
 
   public constructor() {
   }
@@ -46,6 +47,10 @@ export class AppComponent {
     this.strictMode = !!event.target.checked;
   }
 
+  public onModeChange(event: any): void {
+    this.mode = event.target.value;
+  }
+
   public processImage(): void {
     if (!this.imageFile) {
       console.error('No image file selected.');
@@ -75,7 +80,7 @@ export class AppComponent {
           );
 
           performance.mark('compression_start');
-          bitmap.optimize(+this.quality, bitmap.mimeType, +this.scale / 100, +this.maxDimension, this.size ? +this.size : undefined, !!this.strictMode).then((data: INgxAdvancedImgBitmapOptimization) => {
+          bitmap.optimize(+this.quality, bitmap.mimeType, +this.scale / 100, +this.maxDimension, this.size ? +this.size : undefined, this.mode, !!this.strictMode).then((data: INgxAdvancedImgBitmapOptimization) => {
             performance.mark('compression_end');
             performance.measure('Image Compression', 'compression_start', 'compression_end');
 
