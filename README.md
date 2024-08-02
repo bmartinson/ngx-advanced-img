@@ -16,7 +16,7 @@ Angular attribute directives suite that provides various HTML img feature extens
       - [Optimizing Bitmaps](#optimizing-bitmaps)
 
 ## About This Package
-This package was built to provide easy to use feature directives that are meant to be used with HTML img tags. The first two features being created are fallback image loading and progressive image loading and caching.
+This package was built to provide easy to use feature directives that are meant to be used with HTML img tags. The first features being created are fallback image loading and progressive image loading and caching. Additionally, it provides helper classes that allow image data to be cached in application memory for quick HTML5 Canvas usage and the library also provides an easy to use interface for encoding images with new mime types and optimize them to meet certain conditions or file sizes.
 
 ## Installation
 ```npm install ngx-advanced-img --save```
