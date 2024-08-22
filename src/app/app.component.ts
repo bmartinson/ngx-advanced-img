@@ -8,23 +8,26 @@ import { INgxAdvancedImgBitmapOptimization, INgxAdvancedImgBitmapInfo, NgxAdvanc
 })
 export class AppComponent {
 
-  public imageFile: File | null = null;
+  public imageFiles: File[] | null = null;
   public scale: number = 100;
   public quality: number = 1;
   public size: number = 2097152;
   public maxDimension: number = 16384;
   public strictMode: boolean = false;
-  public mode: 'retain-size' | 'retain-quality' | 'balanced' | 'hardcore' = 'balanced';
+  public mode: 'prefer-size' | 'prefer-quality' | 'balanced' | 'hardcore' = 'prefer-size';
 
   public constructor() {
   }
 
-  public onFileChange(event: any): void {
-    const file = event.target.files[0];
+  private static getFileNameWithoutExtension(file: File): string {
+    const fileName = file.name;
+    const lastDotIndex = fileName.lastIndexOf('.');
+    if (lastDotIndex === -1) return fileName; // No extension found
+    return fileName.substring(0, lastDotIndex);
+  }
 
-    if (file) {
-      this.imageFile = file;
-    }
+  public onFileChange(event: any): void {
+    this.imageFiles = Array.from(event.target?.files);
   }
 
   public onScaleChange(event: any): void {
@@ -52,60 +55,65 @@ export class AppComponent {
   }
 
   public processImage(): void {
-    if (!this.imageFile) {
+    if (!this.imageFiles) {
       console.error('No image file selected.');
       return;
     }
 
-    // Implement image processing logic here
-    const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(this.imageFile, '', 0, 0);
-    bitmap.debug = true;
+    this.imageFiles.forEach((file: File) => {
+      if (file) {
+        // Implement image processing logic here
+        const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(file, '', 0, 0);
+        bitmap.debug = true;
 
-    NgxAdvancedImgBitmap.getImageDataFromBlob(this.imageFile as Blob).then((data: INgxAdvancedImgBitmapInfo) => {
-      if (data.fileSize > this.size) {
-        bitmap.load().finally(() => {
-          console.log('bitmap loaded with size (B):', bitmap.fileSize);
+        NgxAdvancedImgBitmap.getImageDataFromBlob(file as Blob).then((data: INgxAdvancedImgBitmapInfo) => {
+          if (data.fileSize > this.size) {
+            bitmap.load().finally(() => {
+              console.log('bitmap loaded with size (B):', bitmap.fileSize);
 
-          // compress the image to a smaller file size
-          console.log(
-            '[TEST] Quality:', this.quality,
-            'Type:', bitmap.mimeType,
-            'Initial Size (B):', bitmap.initialFileSize,
-            'Loaded File Size (B):', bitmap.fileSize,
-            'Size Limit (B):', this.size,
-            'Dimension Limit (pixels):', this.maxDimension,
-            'Resize Factor', this.scale / 100,
-            'Strict Mode:', !!this.strictMode,
-          );
+              // compress the image to a smaller file size
+              console.log(`Optimizing ${file.name}...`);
+              console.log(
+                'Quality:', this.quality,
+                'Type:', bitmap.mimeType,
+                'Initial Size (B):', bitmap.initialFileSize,
+                'Loaded File Size (B):', bitmap.fileSize,
+                'Size Limit (B):', this.size,
+                'Dimension Limit (pixels):', this.maxDimension,
+                'Resize Factor', this.scale / 100,
+                'Strict Mode:', !!this.strictMode,
+              );
 
-          performance.mark('compression_start');
-          bitmap.optimize(+this.quality, bitmap.mimeType, +this.scale / 100, +this.maxDimension, this.size ? +this.size : undefined, this.mode, !!this.strictMode).then((data: INgxAdvancedImgBitmapOptimization) => {
-            performance.mark('compression_end');
-            performance.measure('Image Compression', 'compression_start', 'compression_end');
+              performance.mark('compression_start');
+              bitmap.optimize(+this.quality, bitmap.mimeType, +this.scale / 100, +this.maxDimension, this.size ? +this.size : undefined, this.mode, !!this.strictMode).then((data: INgxAdvancedImgBitmapOptimization) => {
+                performance.mark('compression_end');
+                performance.measure('Image Compression', 'compression_start', 'compression_end');
 
-            // auto save this for the user
-            console.log('[TEST] Saving URL:', data.objectURL, data.exifData);
+                // auto save this for the user
+                console.log('[TEST] Saving URL:', data.objectURL, data.exifData);
 
-            performance.mark('save_start');
-            bitmap.saveFile(`test_output_${this.mode}_${this.size}`, data.objectURL, bitmap.mimeType);
-            performance.mark('save_end');
-            performance.measure('Image Saving', 'save_start', 'save_end');
+                performance.mark('save_start');
+                bitmap.saveFile(`test_output_${AppComponent.getFileNameWithoutExtension(file)}_q-${this.quality}_m-${this.mode}_s-${this.size}`, data.objectURL, bitmap.mimeType);
+                performance.mark('save_end');
+                performance.measure('Image Saving', 'save_start', 'save_end');
 
-            const compressionMeasure = performance.getEntriesByName('Image Compression')[0];
-            const saveMeasure = performance.getEntriesByName('Image Saving')[0];
-            console.log(`${bitmap.mimeType} compression took ${compressionMeasure.duration} ms`);
-            console.log(`${bitmap.mimeType} saving took ${saveMeasure.duration} ms`);
+                const compressionMeasure = performance.getEntriesByName('Image Compression')[0];
+                const saveMeasure = performance.getEntriesByName('Image Saving')[0];
+                console.log(`${bitmap.mimeType} compression took ${compressionMeasure.duration} ms`);
+                console.log(`${bitmap.mimeType} saving took ${saveMeasure.duration} ms`);
 
-            // reset performance
-            performance.clearMarks();
-            performance.clearMeasures();
+                // reset performance
+                performance.clearMarks();
+                performance.clearMeasures();
 
-            // clean up the bitmap
-            bitmap.destroy();
-          }); // let the errors bubble up
+                // clean up the bitmap
+                bitmap.destroy();
+              }); // let the errors bubble up
+            });
+          } else {
+            console.warn('~~~ No compression is needed, your file is already small enough!');
+          }
         });
-      } else {
-        console.warn('~~~ No compression is needed, your file is already small enough!');
       }
     });
   }

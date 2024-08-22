@@ -699,7 +699,7 @@ export class NgxAdvancedImgBitmap {
     resizeFactor: number = 1,
     maxDimension?: number | undefined, // 16,384 is a reasonable safe limit for most browsers
     sizeLimit?: number | undefined,
-    mode?: 'retain-quality' | 'retain-size' | 'balanced' | 'hardcore' | undefined,
+    mode?: 'prefer-quality' | 'prefer-size' | 'balanced' | 'hardcore' | undefined,
     strict?: boolean,
   ): Promise<INgxAdvancedImgBitmapOptimization> {
     return this._optimize(quality, type, resizeFactor, maxDimension, sizeLimit, mode, undefined, strict);
@@ -727,7 +727,7 @@ export class NgxAdvancedImgBitmap {
     resizeFactor: number = 1,
     maxDimension?: number | undefined, // 16,384 is a reasonable safe limit for most browsers
     sizeLimit?: number | undefined,
-    mode?: 'retain-quality' | 'retain-size' | 'balanced' | 'hardcore' | undefined,
+    mode?: 'prefer-quality' | 'prefer-size' | 'balanced' | 'hardcore' | undefined,
     lastOp?: 'quality' | 'scale' | undefined,
     strict?: boolean,
   ): Promise<INgxAdvancedImgBitmapOptimization> {
@@ -820,15 +820,15 @@ export class NgxAdvancedImgBitmap {
 
           let qualityFloor = 0.8;
           let scaleFloor = 0.5;
-          let preferredOp: 'retain-size' | 'retain-quality' = 'retain-size';
+          let preferredOp: 'prefer-size' | 'prefer-quality' = 'prefer-size';
 
           switch (mode) {
             case 'balanced':
               if (lastOp === 'quality') {
-                preferredOp = 'retain-size';
+                preferredOp = 'prefer-size';
                 lastOp = 'scale';
               } else {
-                preferredOp = 'retain-quality'
+                preferredOp = 'prefer-quality'
                 lastOp = 'quality';
               }
               break;
@@ -839,25 +839,25 @@ export class NgxAdvancedImgBitmap {
               scaleFloor = 0.025;
 
               if (lastOp === 'quality') {
-                preferredOp = 'retain-size';
+                preferredOp = 'prefer-size';
                 lastOp = 'scale';
               } else {
-                preferredOp = 'retain-quality'
+                preferredOp = 'prefer-quality'
                 lastOp = 'quality';
               }
               break;
 
-            case 'retain-size':
+            case 'prefer-size':
               qualityFloor = 0.025;
               scaleFloor = 0.025;
-              preferredOp = 'retain-size';
+              preferredOp = 'prefer-size';
               lastOp = 'quality';
               break;
 
-            case 'retain-quality':
+            case 'prefer-quality':
               qualityFloor = 0.025;
               scaleFloor = 0.025;
-              preferredOp = 'retain-quality';
+              preferredOp = 'prefer-quality';
               lastOp = 'scale';
               break;
           }
@@ -867,7 +867,7 @@ export class NgxAdvancedImgBitmap {
            */
 
           switch (preferredOp) {
-            case 'retain-quality':
+            case 'prefer-quality':
               // base case if we are at our bottom quality and resize factor, resolve
               if (!strict && quality === qualityFloor && resizeFactor === scaleFloor) {
                 const exifData: any = JSON.parse(JSON.stringify(this.exifData));
@@ -912,7 +912,7 @@ export class NgxAdvancedImgBitmap {
 
               return;
 
-            case 'retain-size':
+            case 'prefer-size':
               // base case if we are at our bottom quality and resize factor, resolve
               if (!strict && quality === qualityFloor && resizeFactor === scaleFloor) {
                 const exifData: any = JSON.parse(JSON.stringify(this.exifData));

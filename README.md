@@ -102,12 +102,12 @@ bitmap.load().finally(() => {
 
 - `quality` - A number between 0-1 that indicates the encoding quality to use (or start with if limiting by size).
 - `type` - The mime type for the resultant data (e.g. `image/jpeg`, `image/png`, etc.)
-- `resizeFactor` - Optional parameter that will scale the physical size of the image by
+- `resizeFactor` - Optional parameter that will scale the physical size of the image by this factor.
 - `maxDimension` - Optional parameter that will limit the maximum dimension (width/height) of the image to while retaining aspect ratio.
 - `sizeLimit` - Optional parameter that will attempt to reduce the resultant file output size to this size in bytes.
-- `mode` - (`retain-quality` | `retain-size` | `balanced` | `hardcore`) - Optional parameter that specifies what size limiting mode to use. Default is `balanced`.
-  - `retain-quality` - Reduces the size of the image first until a threshold is achieved. Then it starts to reduce quality after that to try and achieve the `sizeLimit`.
-  - `retain-size` - Reduces the quality of the image first until a threshold is achieved. Then it starts to reduce size after that to try and achieve the `sizeLimit`.
+- `mode` - (`prefer-quality` | `prefer-size` | `balanced` | `hardcore`) - Optional parameter that specifies what size limiting mode to use. Default is `balanced`.
+  - `prefer-quality` - Reduces the size of the image first until a threshold is achieved. Then it starts to reduce quality after that to try and achieve the `sizeLimit`.
+  - `prefer-size` - Reduces the quality of the image first until a threshold is achieved. Then it starts to reduce size after that to try and achieve the `sizeLimit`.
   - `balanced` - Alternates between adjusting quality and size while retaining reasonable thresholds of modification.
   - `hardcore` - Alternates between adjusting quality and size without regards to reasonable limits. It will go as far as making an image have 0.025 quality and 0.025x the scale of the original image.
 - `strict` - Optional parameter, if set to true, will throw an exception if a given `sizeLimit` is unobtainable. If set to false, the optimization will return whatever data it can generate as close to the size limit as possible.
