@@ -54,19 +54,29 @@ export class AppComponent {
     this.mode = event.target.value;
   }
 
-  public processImage(): void {
+  public async processImage(): Promise<void> {
     if (!this.imageFiles) {
       console.error('No image file selected.');
       return;
     }
 
-    this.imageFiles.forEach((file: File) => {
+    this.imageFiles.forEach(async (file: File) => {
       if (file) {
+        let blob: Blob = file;
+        // convert HEIC to JPEG if
+        if (file.type === 'image/heic') {
+          console.log('Converting HEIC to JPEG...');
+          const [jpeg, heicData] = await NgxAdvancedImgBitmap.convertHEIC(file, 'image/jpeg');
+
+          blob = jpeg;
+          console.log('HEIC data:', heicData);
+        }
+
         // Implement image processing logic here
-        const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(file, '', 0, 0);
+        const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(blob, '', 0, 0);
         bitmap.debug = true;
 
-        NgxAdvancedImgBitmap.getImageDataFromBlob(file as Blob).then((data: INgxAdvancedImgBitmapInfo) => {
+        NgxAdvancedImgBitmap.getImageDataFromBlob(blob).then((data: INgxAdvancedImgBitmapInfo) => {
           if (data.fileSize > this.size) {
             bitmap.load().finally(() => {
               console.log('bitmap loaded with size (B):', bitmap.fileSize);

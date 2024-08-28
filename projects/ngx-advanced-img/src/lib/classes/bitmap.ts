@@ -1,5 +1,6 @@
 import * as exif from 'exifr';
 import mime from 'mime';
+import heic2any from 'heic2any';
 import { Observable, Subject } from 'rxjs';
 
 import Timeout = NodeJS.Timeout;
@@ -210,6 +211,33 @@ export class NgxAdvancedImgBitmap {
     this._objectURL = '';
     this._fileSize = this._initialFileSize = 0;
     this.debug = false;
+  }
+
+  /**
+   * Standard function to convert a HEIC image to a different format for further processing.
+   * 
+   * @param heic The HEIC file to convert.
+   * @param format The format to convert the HEIC file to.
+   */
+  public static convertHEIC(heic: File, format: 'image/jpeg' | 'image/png'): Promise<[Blob, INgxAdvancedImgBitmapInfo]> {
+    return NgxAdvancedImgBitmap.getImageDataFromBlob(heic as Blob).then((data: INgxAdvancedImgBitmapInfo) => {
+      return heic2any({
+        blob: heic,      // Input HEIC File object
+        toType: format, // Desired output format
+      })
+      .then((convertedBlob) => {
+        // use first image if HEIC file contains multiple images
+        if (Array.isArray(convertedBlob)) {
+          convertedBlob = convertedBlob[0];
+        }
+  
+        return [convertedBlob, data] as [Blob, INgxAdvancedImgBitmapInfo];
+      })
+      .catch((error) => {
+        console.error('Error during HEIC to JPEG conversion:', error);
+        return Promise.reject(error);
+      });
+    })
   }
 
   /**
