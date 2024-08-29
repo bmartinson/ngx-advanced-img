@@ -219,10 +219,9 @@ export class NgxAdvancedImgBitmap {
    * @param heic The HEIC file to convert.
    * @param format The format to convert the HEIC file to.
    */
-  public static convertHEIC(heic: File, format: 'image/jpeg' | 'image/png'): Promise<[Blob, INgxAdvancedImgBitmapInfo]> {
-    return NgxAdvancedImgBitmap.getImageDataFromBlob(heic as Blob).then((data: INgxAdvancedImgBitmapInfo) => {
+  public static convertHEIC(blob: Blob, format: 'image/jpeg' | 'image/png'): Promise<Blob> {
       return heic2any({
-        blob: heic,      // Input HEIC File object
+        blob: blob,      // Input HEIC File object
         toType: format, // Desired output format
       })
       .then((convertedBlob) => {
@@ -230,14 +229,12 @@ export class NgxAdvancedImgBitmap {
         if (Array.isArray(convertedBlob)) {
           convertedBlob = convertedBlob[0];
         }
-  
-        return [convertedBlob, data] as [Blob, INgxAdvancedImgBitmapInfo];
+        return convertedBlob;
       })
       .catch((error) => {
         console.error('Error during HEIC to JPEG conversion:', error);
         return Promise.reject(error);
       });
-    })
   }
 
   /**
@@ -387,6 +384,24 @@ export class NgxAdvancedImgBitmap {
     // if no valid source, then reject the load
     if (!this.src) {
       return Promise.reject();
+    }
+
+    // HEICs need to be converted before loading
+    let needsHEICConversion = false;
+    if (typeof this.src === 'string') {
+      if (this.src.startsWith('data:image/heic')) {
+        needsHEICConversion = true;
+        // convert to blob
+        this.src = NgxAdvancedImgBitmap.dataURItoBlob(this.src);
+      }
+    } else if (this.src.type === 'image/heic') {
+      needsHEICConversion = true;
+    }
+
+    if (needsHEICConversion) {
+      const jpeg = await NgxAdvancedImgBitmap.convertHEIC(this.src as Blob, 'image/jpeg');
+
+      this.src = jpeg;
     }
 
     // if we have an expiration clock ticking, clear it
