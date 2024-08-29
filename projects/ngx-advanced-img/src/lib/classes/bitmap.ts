@@ -245,13 +245,16 @@ export class NgxAdvancedImgBitmap {
   public static getImageDataFromBlob(data: Blob): Promise<INgxAdvancedImgBitmapInfo> {
     const fileSize: number = data.size;
 
-    return new Promise((resolve: (value: INgxAdvancedImgBitmapInfo) => void) => {
+    return new Promise((resolve: (value: INgxAdvancedImgBitmapInfo) => void, reject: (reason?: any) => void) => {
       // parse the exif data direction while the image content loads
       exif.parse(data, true).then((exifData: any) => {
         resolve({
           fileSize,
           exifData,
         });
+      })
+      .catch((error) => {
+        reject(error);
       });
     });
   }

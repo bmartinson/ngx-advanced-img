@@ -113,7 +113,9 @@ export class AppComponent {
           } else {
             console.warn('~~~ No compression is needed, your file is already small enough!');
           }
-        });
+        }).catch((e) => {
+          console.error('Unable to get image data from blob:', e);
+        })
       }
     });
   }
