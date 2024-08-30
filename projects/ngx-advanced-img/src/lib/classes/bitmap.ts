@@ -215,26 +215,25 @@ export class NgxAdvancedImgBitmap {
 
   /**
    * Standard function to convert a HEIC image to a different format for further processing.
-   * 
+   *
    * @param heic The HEIC file to convert.
    * @param format The format to convert the HEIC file to.
    */
-  public static convertHEIC(blob: Blob, format: 'image/jpeg' | 'image/png'): Promise<Blob> {
-      return heic2any({
-        blob: blob,      // Input HEIC File object
-        toType: format, // Desired output format
-      })
-      .then((convertedBlob) => {
-        // use first image if HEIC file contains multiple images
-        if (Array.isArray(convertedBlob)) {
-          convertedBlob = convertedBlob[0];
-        }
-        return convertedBlob;
-      })
-      .catch((error) => {
-        console.error('Error during HEIC to JPEG conversion:', error);
-        return Promise.reject(error);
-      });
+  private static convertHEIC(blob: Blob, format: 'image/jpeg' | 'image/png'): Promise<Blob> {
+    return heic2any({
+      blob: blob,      // Input HEIC File object
+      toType: format, // Desired output format
+    }).then((convertedBlob: Blob | Blob[]) => {
+      // use first image if HEIC file contains multiple images
+      if (Array.isArray(convertedBlob)) {
+        convertedBlob = convertedBlob[0];
+      }
+
+      return convertedBlob;
+    }).catch((error: any) => {
+      console.error('Error during HEIC to JPEG conversion:', error);
+      return Promise.reject(error);
+    });
   }
 
   /**
@@ -252,8 +251,7 @@ export class NgxAdvancedImgBitmap {
           fileSize,
           exifData,
         });
-      })
-      .catch((error) => {
+      }).catch((error: any) => {
         reject(error);
       });
     });
