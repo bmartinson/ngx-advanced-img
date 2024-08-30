@@ -66,8 +66,8 @@ export class AppComponent {
         const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(file, '', 0, 0);
         bitmap.debug = true;
 
-        NgxAdvancedImgBitmap.getImageDataFromBlob(file as Blob).then((data: INgxAdvancedImgBitmapInfo) => {
-          if (data.fileSize > this.size) {
+        NgxAdvancedImgBitmap.getImageDataFromBlob(file as Blob).then((unoptimizedData: INgxAdvancedImgBitmapInfo) => {
+          if (unoptimizedData.fileSize > this.size) {
             bitmap.load().finally(() => {
               console.log('bitmap loaded with size (B):', bitmap.fileSize);
 
@@ -90,7 +90,7 @@ export class AppComponent {
                 performance.measure('Image Compression', 'compression_start', 'compression_end');
 
                 // auto save this for the user
-                console.log('[TEST] Saving URL:', data.objectURL, data.exifData);
+                console.log('[TEST] Saving URL:', data.objectURL, data.exifData, unoptimizedData.exifData);
 
                 performance.mark('save_start');
                 bitmap.saveFile(`test_output_${AppComponent.getFileNameWithoutExtension(file)}_q-${this.quality}_m-${this.mode}_s-${this.size}`, data.objectURL, bitmap.mimeType);
@@ -113,7 +113,9 @@ export class AppComponent {
           } else {
             console.warn('~~~ No compression is needed, your file is already small enough!');
           }
-        });
+        }).catch((e) => {
+          console.error('Unable to get image data from blob:', e);
+        })
       }
     });
   }
