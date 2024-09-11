@@ -72,11 +72,11 @@ export class AppComponent {
         bitmap.debug = true;
 
         NgxAdvancedImgBitmap.getImageDataFromBlob(file as Blob).then((unOptimizedData: INgxAdvancedImgBitmapInfo) => {
-          const mimeType: string = this.retainMimeType ? bitmap.mimeType : "image/webp";
-
           if (unOptimizedData.fileSize > this.size) {
             performance.mark('load_start');
             bitmap.load().finally(() => {
+              const mimeType: string = this.retainMimeType ? bitmap.mimeType : "image/webp";
+
               performance.mark('load_end');
               performance.measure('Image Load', 'load_start', 'load_end');
 
