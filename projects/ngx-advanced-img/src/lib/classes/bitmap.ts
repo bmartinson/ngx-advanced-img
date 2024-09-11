@@ -771,7 +771,7 @@ export class NgxAdvancedImgBitmap {
     resizeFactor: number = 1,
     maxDimension?: number | undefined, // 16,384 is a reasonable safe limit for most browsers
     sizeLimit?: number | undefined,
-    mode?: 'prefer-quality' | 'prefer-size' | 'balanced' | 'hardcore' | undefined,
+    mode?: 'classic' | 'prefer-quality' | 'prefer-size' | 'balanced' | 'hardcore' | undefined,
     lastOp?: 'quality' | 'scale' | undefined,
     strict?: boolean,
   ): Promise<INgxAdvancedImgBitmapOptimization> {
@@ -862,8 +862,8 @@ export class NgxAdvancedImgBitmap {
             throw new Error('Invalid resize factor reached (<= 0)');
           }
 
-          let qualityFloor = 0.8;
-          let scaleFloor = 0.5;
+          let qualityFloor = 0.025;
+          let scaleFloor = 0.025;
           let preferredOp: 'prefer-size' | 'prefer-quality' = 'prefer-size';
 
           switch (mode) {
@@ -878,10 +878,6 @@ export class NgxAdvancedImgBitmap {
               break;
 
             case 'hardcore':
-              // let the compression go as low as possible
-              qualityFloor = 0.025;
-              scaleFloor = 0.025;
-
               if (lastOp === 'quality') {
                 preferredOp = 'prefer-size';
                 lastOp = 'scale';
@@ -899,6 +895,15 @@ export class NgxAdvancedImgBitmap {
             case 'prefer-quality':
               preferredOp = 'prefer-quality';
               lastOp = 'scale';
+              break;
+
+            default:
+            case 'classic':
+              qualityFloor = 0.8;
+              scaleFloor = 0.1;
+
+              preferredOp = 'prefer-size';
+              lastOp = 'quality';
               break;
           }
 

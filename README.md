@@ -106,6 +106,7 @@ bitmap.load().finally(() => {
 - `maxDimension` - Optional parameter that will limit the maximum dimension (width/height) of the image to while retaining aspect ratio.
 - `sizeLimit` - Optional parameter that will attempt to reduce the resultant file output size to this size in bytes.
 - `mode` - (`prefer-quality` | `prefer-size` | `balanced` | `hardcore`) - Optional parameter that specifies what size limiting mode to use. Default is `balanced`.
+  - `classic` - Uses the `prefer-quality` approach but sets reasonable thresholds for scale and size thresholds.
   - `prefer-quality` - Reduces the size of the image first until a threshold is achieved. Then it starts to reduce quality after that to try and achieve the `sizeLimit`.
   - `prefer-size` - Reduces the quality of the image first until a threshold is achieved. Then it starts to reduce size after that to try and achieve the `sizeLimit`.
   - `balanced` - Alternates between adjusting quality and size while retaining reasonable thresholds of modification.
