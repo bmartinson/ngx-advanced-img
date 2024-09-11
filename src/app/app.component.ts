@@ -64,21 +64,25 @@ export class AppComponent {
       level = 'log';
     }
 
+    let style = '';
+
     switch (level) {
       case 'log':
         console.log(...message);
         break;
       case 'warn':
         console.warn(...message);
+        style = ` style='background-color:rgba(234, 239, 44, 0.5)`;
         break;
       case 'error':
         console.error(...message);
+        style = ` style='background-color:rgba(255, 0, 0, 0.5)`;
         break;
     }
 
     const logElement = document.getElementById('log');
     if (logElement) {
-      logElement.innerHTML += message.join(' ') + '<br>';
+      logElement.innerHTML += `<span${style}>` + message.join(' ') + `</span><br>`;
     }
   }
 
@@ -127,7 +131,7 @@ export class AppComponent {
                 this.prettyLog(['[TEST] Saving URL:', data.objectURL, data.exifData, unOptimizedData.exifData]);
 
                 performance.mark('save_start');
-                bitmap.saveFile(`test_output_${AppComponent.getFileNameWithoutExtension(file)}_q-${this.quality}_m-${this.mode}_s-${this.size}`, data.objectURL, mimeType);
+                bitmap.saveFile(`test_output_${AppComponent.getFileNameWithoutExtension(file)} _q - ${this.quality} _m - ${this.mode} _s - ${this.size} `, data.objectURL, mimeType);
                 performance.mark('save_end');
                 performance.measure('Image Saving', 'save_start', 'save_end');
 
