@@ -15,7 +15,7 @@ export class AppComponent {
   public maxDimension: number = 16384;
   public strictMode: boolean = false;
   public retainMimeType: boolean = false;
-  public mode: 'prefer-size' | 'prefer-quality' | 'balanced' | 'hardcore' = 'prefer-size';
+  public mode: 'classic' | 'prefer-size' | 'prefer-quality' | 'balanced' | 'hardcore' = 'classic';
 
   public constructor() {
   }

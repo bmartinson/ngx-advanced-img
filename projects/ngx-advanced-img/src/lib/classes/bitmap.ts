@@ -743,7 +743,7 @@ export class NgxAdvancedImgBitmap {
     resizeFactor: number = 1,
     maxDimension?: number | undefined, // 16,384 is a reasonable safe limit for most browsers
     sizeLimit?: number | undefined,
-    mode?: 'prefer-quality' | 'prefer-size' | 'balanced' | 'hardcore' | undefined,
+    mode?: 'classic' | 'prefer-quality' | 'prefer-size' | 'balanced' | 'hardcore' | undefined,
     strict?: boolean,
   ): Promise<INgxAdvancedImgBitmapOptimization> {
     return this._optimize(quality, type, resizeFactor, maxDimension, sizeLimit, mode, undefined, strict);
