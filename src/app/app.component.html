@@ -90,6 +90,14 @@
     <div><i>Require, optimization mode. Go check the readme linked above to understand how each works.</i></div>
     <hr>
     <div>
+      <label for="retainMimeTypeInput">Retain mime type (webp if not checked):&nbsp;</label>
+      <input type="checkbox"
+             id="retainMimeTypeInput"
+             [value]="retainMimeType"
+             (change)="onRetainMimeTypeChange($event)">
+    </div>
+    <hr>
+    <div>
       <label for="strictModeInput">Use Strict Mode (fail when size limit cannot be reached):&nbsp;</label>
       <input type="checkbox"
              id="strictModeInput"

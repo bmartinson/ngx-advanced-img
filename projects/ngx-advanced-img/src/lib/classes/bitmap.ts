@@ -33,7 +33,7 @@ export interface INgxAdvancedImgBitmapInfo {
 export class NgxAdvancedImgBitmap {
 
   private static ITERATION_FACTOR = 0.025;
-  private static QUALITY_FACTOR = 1.65;
+  private static QUALITY_FACTOR = 0.5;
 
   public resolution: NgxAdvancedImgResolution;
   public src: string | Blob;
@@ -892,15 +892,11 @@ export class NgxAdvancedImgBitmap {
               break;
 
             case 'prefer-size':
-              qualityFloor = 0.025;
-              scaleFloor = 0.025;
               preferredOp = 'prefer-size';
               lastOp = 'quality';
               break;
 
             case 'prefer-quality':
-              qualityFloor = 0.025;
-              scaleFloor = 0.025;
               preferredOp = 'prefer-quality';
               lastOp = 'scale';
               break;

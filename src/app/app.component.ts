@@ -14,6 +14,7 @@ export class AppComponent {
   public size: number = 2097152;
   public maxDimension: number = 16384;
   public strictMode: boolean = false;
+  public retainMimeType: boolean = false;
   public mode: 'prefer-size' | 'prefer-quality' | 'balanced' | 'hardcore' = 'prefer-size';
 
   public constructor() {
@@ -46,6 +47,10 @@ export class AppComponent {
     this.maxDimension = +event.target.value;
   }
 
+  public onRetainMimeTypeChange(event: any): void {
+    this.retainMimeType = !!event.target.checked;
+  }
+
   public onStrictModeChange(event: any): void {
     this.strictMode = !!event.target.checked;
   }
@@ -66,8 +71,10 @@ export class AppComponent {
         const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(file, '', 0, 0);
         bitmap.debug = true;
 
-        NgxAdvancedImgBitmap.getImageDataFromBlob(file as Blob).then((unoptimizedData: INgxAdvancedImgBitmapInfo) => {
-          if (unoptimizedData.fileSize > this.size) {
+        NgxAdvancedImgBitmap.getImageDataFromBlob(file as Blob).then((unOptimizedData: INgxAdvancedImgBitmapInfo) => {
+          const mimeType: string = this.retainMimeType ? bitmap.mimeType : "image/webp";
+
+          if (unOptimizedData.fileSize > this.size) {
             bitmap.load().finally(() => {
               console.log('bitmap loaded with size (B):', bitmap.fileSize);
 
@@ -75,7 +82,7 @@ export class AppComponent {
               console.log(`Optimizing ${file.name}...`);
               console.log(
                 'Quality:', this.quality,
-                'Type:', bitmap.mimeType,
+                'Type:', mimeType,
                 'Initial Size (B):', bitmap.initialFileSize,
                 'Loaded File Size (B):', bitmap.fileSize,
                 'Size Limit (B):', this.size,
@@ -85,22 +92,22 @@ export class AppComponent {
               );
 
               performance.mark('compression_start');
-              bitmap.optimize(+this.quality, bitmap.mimeType, +this.scale / 100, +this.maxDimension, this.size ? +this.size : undefined, this.mode, !!this.strictMode).then((data: INgxAdvancedImgBitmapOptimization) => {
+              bitmap.optimize(+this.quality, mimeType, +this.scale / 100, +this.maxDimension, this.size ? +this.size : undefined, this.mode, !!this.strictMode).then((data: INgxAdvancedImgBitmapOptimization) => {
                 performance.mark('compression_end');
                 performance.measure('Image Compression', 'compression_start', 'compression_end');
 
                 // auto save this for the user
-                console.log('[TEST] Saving URL:', data.objectURL, data.exifData, unoptimizedData.exifData);
+                console.log('[TEST] Saving URL:', data.objectURL, data.exifData, unOptimizedData.exifData);
 
                 performance.mark('save_start');
-                bitmap.saveFile(`test_output_${AppComponent.getFileNameWithoutExtension(file)}_q-${this.quality}_m-${this.mode}_s-${this.size}`, data.objectURL, bitmap.mimeType);
+                bitmap.saveFile(`test_output_${AppComponent.getFileNameWithoutExtension(file)}_q-${this.quality}_m-${this.mode}_s-${this.size}`, data.objectURL, mimeType);
                 performance.mark('save_end');
                 performance.measure('Image Saving', 'save_start', 'save_end');
 
                 const compressionMeasure = performance.getEntriesByName('Image Compression')[0];
                 const saveMeasure = performance.getEntriesByName('Image Saving')[0];
-                console.log(`${bitmap.mimeType} compression took ${compressionMeasure.duration} ms`);
-                console.log(`${bitmap.mimeType} saving took ${saveMeasure.duration} ms`);
+                console.log(`${mimeType} compression took ${compressionMeasure.duration} ms`);
+                console.log(`${mimeType} saving took ${saveMeasure.duration} ms`);
 
                 // reset performance
                 performance.clearMarks();
