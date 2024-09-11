@@ -128,7 +128,7 @@ export class AppComponent {
           }
         }).catch((e) => {
           console.error('Unable to get image data from blob:', e);
-        })
+        });
       }
     });
   }
