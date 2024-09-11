@@ -59,6 +59,14 @@ export class AppComponent {
     this.mode = event.target.value;
   }
 
+  public prettyLog(message: string): void {
+    console.log(message);
+    const logElement = document.getElementById('log');
+    if (logElement) {
+      logElement.innerHTML += message + '<br>';
+    }
+  }
+
   public processImage(): void {
     if (!this.imageFiles) {
       console.error('No image file selected.');
@@ -111,9 +119,9 @@ export class AppComponent {
                 const loadMeasure = performance.getEntriesByName('Image Load')[0];
                 const optimizationMeasure = performance.getEntriesByName('Image Optimization')[0];
                 const saveMeasure = performance.getEntriesByName('Image Saving')[0];
-                console.log(`Image load took ${loadMeasure.duration} ms`);
-                console.log(`${mimeType} optimization took ${optimizationMeasure.duration} ms`);
-                console.log(`${mimeType} saving took ${saveMeasure.duration} ms`);
+                this.prettyLog(`Image load took ${loadMeasure.duration} ms`);
+                this.prettyLog(`${mimeType} optimization took ${optimizationMeasure.duration} ms`);
+                this.prettyLog(`${mimeType} saving took ${saveMeasure.duration} ms`);
 
                 // reset performance
                 performance.clearMarks();
