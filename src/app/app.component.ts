@@ -75,7 +75,11 @@ export class AppComponent {
           const mimeType: string = this.retainMimeType ? bitmap.mimeType : "image/webp";
 
           if (unOptimizedData.fileSize > this.size) {
+            performance.mark('load_start');
             bitmap.load().finally(() => {
+              performance.mark('load_end');
+              performance.measure('Image Load', 'load_start', 'load_end');
+
               console.log('bitmap loaded with size (B):', bitmap.fileSize);
 
               // compress the image to a smaller file size
@@ -91,10 +95,10 @@ export class AppComponent {
                 'Strict Mode:', !!this.strictMode,
               );
 
-              performance.mark('compression_start');
+              performance.mark('optimization_start');
               bitmap.optimize(+this.quality, mimeType, +this.scale / 100, +this.maxDimension, this.size ? +this.size : undefined, this.mode, !!this.strictMode).then((data: INgxAdvancedImgBitmapOptimization) => {
-                performance.mark('compression_end');
-                performance.measure('Image Compression', 'compression_start', 'compression_end');
+                performance.mark('optimization_end');
+                performance.measure('Image Optimization', 'optimization_start', 'optimization_end');
 
                 // auto save this for the user
                 console.log('[TEST] Saving URL:', data.objectURL, data.exifData, unOptimizedData.exifData);
@@ -104,9 +108,11 @@ export class AppComponent {
                 performance.mark('save_end');
                 performance.measure('Image Saving', 'save_start', 'save_end');
 
-                const compressionMeasure = performance.getEntriesByName('Image Compression')[0];
+                const loadMeasure = performance.getEntriesByName('Image Load')[0];
+                const optimizationMeasure = performance.getEntriesByName('Image Optimization')[0];
                 const saveMeasure = performance.getEntriesByName('Image Saving')[0];
-                console.log(`${mimeType} compression took ${compressionMeasure.duration} ms`);
+                console.log(`Image load took ${loadMeasure.duration} ms`);
+                console.log(`${mimeType} optimization took ${optimizationMeasure.duration} ms`);
                 console.log(`${mimeType} saving took ${saveMeasure.duration} ms`);
 
                 // reset performance
@@ -118,7 +124,7 @@ export class AppComponent {
               }); // let the errors bubble up
             });
           } else {
-            console.warn('~~~ No compression is needed, your file is already small enough!');
+            console.warn('~~~ No optimization is needed, your file is already small enough!');
           }
         }).catch((e) => {
           console.error('Unable to get image data from blob:', e);
