@@ -59,17 +59,32 @@ export class AppComponent {
     this.mode = event.target.value;
   }
 
-  public prettyLog(message: string): void {
-    console.log(message);
+  public prettyLog(message: any[], level?: 'log' | 'warn' | 'error' | undefined): void {
+    if (!level) {
+      level = 'log';
+    }
+
+    switch (level) {
+      case 'log':
+        console.log(...message);
+        break;
+      case 'warn':
+        console.warn(...message);
+        break;
+      case 'error':
+        console.error(...message);
+        break;
+    }
+
     const logElement = document.getElementById('log');
     if (logElement) {
-      logElement.innerHTML += message + '<br>';
+      logElement.innerHTML += message.join(' ') + '<br>';
     }
   }
 
   public processImage(): void {
     if (!this.imageFiles) {
-      console.error('No image file selected.');
+      this.prettyLog(['No image file selected.'], 'error');
       return;
     }
 
@@ -88,11 +103,11 @@ export class AppComponent {
               performance.mark('load_end');
               performance.measure('Image Load', 'load_start', 'load_end');
 
-              console.log('bitmap loaded with size (B):', bitmap.fileSize);
+              this.prettyLog(['bitmap loaded with size (B):', bitmap.fileSize]);
 
               // compress the image to a smaller file size
-              console.log(`Optimizing ${file.name}...`);
-              console.log(
+              this.prettyLog([`Optimizing ${file.name}...`]);
+              this.prettyLog([
                 'Quality:', this.quality,
                 'Type:', mimeType,
                 'Initial Size (B):', bitmap.initialFileSize,
@@ -101,7 +116,7 @@ export class AppComponent {
                 'Dimension Limit (pixels):', this.maxDimension,
                 'Resize Factor', this.scale / 100,
                 'Strict Mode:', !!this.strictMode,
-              );
+              ]);
 
               performance.mark('optimization_start');
               bitmap.optimize(+this.quality, mimeType, +this.scale / 100, +this.maxDimension, this.size ? +this.size : undefined, this.mode, !!this.strictMode).then((data: INgxAdvancedImgBitmapOptimization) => {
@@ -109,7 +124,7 @@ export class AppComponent {
                 performance.measure('Image Optimization', 'optimization_start', 'optimization_end');
 
                 // auto save this for the user
-                console.log('[TEST] Saving URL:', data.objectURL, data.exifData, unOptimizedData.exifData);
+                this.prettyLog(['[TEST] Saving URL:', data.objectURL, data.exifData, unOptimizedData.exifData]);
 
                 performance.mark('save_start');
                 bitmap.saveFile(`test_output_${AppComponent.getFileNameWithoutExtension(file)}_q-${this.quality}_m-${this.mode}_s-${this.size}`, data.objectURL, mimeType);
@@ -119,9 +134,9 @@ export class AppComponent {
                 const loadMeasure = performance.getEntriesByName('Image Load')[0];
                 const optimizationMeasure = performance.getEntriesByName('Image Optimization')[0];
                 const saveMeasure = performance.getEntriesByName('Image Saving')[0];
-                this.prettyLog(`Image load took ${loadMeasure.duration} ms`);
-                this.prettyLog(`${mimeType} optimization took ${optimizationMeasure.duration} ms`);
-                this.prettyLog(`${mimeType} saving took ${saveMeasure.duration} ms`);
+                this.prettyLog([`Image load took ${loadMeasure.duration} ms`]);
+                this.prettyLog([`${mimeType} optimization took ${optimizationMeasure.duration} ms`]);
+                this.prettyLog([`${mimeType} saving took ${saveMeasure.duration} ms`]);
 
                 // reset performance
                 performance.clearMarks();
@@ -132,10 +147,10 @@ export class AppComponent {
               }); // let the errors bubble up
             });
           } else {
-            console.warn('~~~ No optimization is needed, your file is already small enough!');
+            this.prettyLog(['~~~ No optimization is needed, your file is already small enough!'], 'warn');
           }
         }).catch((e) => {
-          console.error('Unable to get image data from blob:', e);
+          this.prettyLog(['Unable to get image data from blob:', e], 'error');
         });
       }
     });
