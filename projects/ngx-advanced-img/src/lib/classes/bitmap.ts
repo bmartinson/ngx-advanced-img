@@ -519,7 +519,7 @@ export class NgxAdvancedImgBitmap {
               ctx.drawImage(this.image, 0, 0);
 
               // if we haven't loaded anonymously, we'll taint the canvas and crash the application
-              let dataUri: string = (anonymous) ? canvas.toDataURL(this._mimeType) : '';
+              let dataUri: string = (anonymous) ? canvas.toDataURL(this._mimeType, 100) : '';
 
               if (typeof this.src === 'string') {
                 // store the exif data
