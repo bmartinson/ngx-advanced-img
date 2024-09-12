@@ -96,7 +96,7 @@ export class AppComponent {
     let defaultMimeType = "image/webp";
 
     if (!this.retainMimeType && !NgxAdvancedImgBitmap.isWebPSupported()) {
-      this.prettyLog(['webp output is not supported by your browser.'], 'error');
+      this.prettyLog(['image/webp output is not supported by your browser....using image/jpeg instead.'], 'error');
 
       // switch to use jpeg for fast optimization
       defaultMimeType = "image/jpeg";
