@@ -92,9 +92,14 @@ export class AppComponent {
       return;
     }
 
+    // if not retaining mime type, let's use webp by default
+    let defaultMimeType = "image/webp";
+
     if (!this.retainMimeType && !NgxAdvancedImgBitmap.isWebPSupported()) {
       this.prettyLog(['webp output is not supported by your browser.'], 'error');
-      return;
+
+      // switch to use jpeg for fast optimization
+      defaultMimeType = "image/jpeg";
     }
 
     this.imageFiles.forEach((file: File) => {
@@ -107,7 +112,7 @@ export class AppComponent {
           if (unOptimizedData.fileSize > this.size) {
             performance.mark('load_start');
             bitmap.load().finally(() => {
-              const mimeType: string = this.retainMimeType ? bitmap.mimeType : "image/webp";
+              const mimeType: string = this.retainMimeType ? bitmap.mimeType : defaultMimeType;
 
               performance.mark('load_end');
               performance.measure('Image Load', 'load_start', 'load_end');
