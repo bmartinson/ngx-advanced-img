@@ -92,6 +92,11 @@ export class AppComponent {
       return;
     }
 
+    if (!this.retainMimeType && !NgxAdvancedImgBitmap.isWebPSupported()) {
+      this.prettyLog(['webp output is not supported by your browser.'], 'error');
+      return;
+    }
+
     this.imageFiles.forEach((file: File) => {
       if (file) {
         // Implement image processing logic here
@@ -141,6 +146,7 @@ export class AppComponent {
                 this.prettyLog([`Image load took ${loadMeasure.duration} ms`]);
                 this.prettyLog([`${mimeType} optimization took ${optimizationMeasure.duration} ms`]);
                 this.prettyLog([`${mimeType} saving took ${saveMeasure.duration} ms`]);
+                this.prettyLog(['']);
 
                 // reset performance
                 performance.clearMarks();

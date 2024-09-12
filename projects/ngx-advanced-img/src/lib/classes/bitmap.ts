@@ -350,6 +350,19 @@ export class NgxAdvancedImgBitmap {
   }
 
   /**
+   * Helper function to see if webp output is supported.
+   *
+   * @returns True if the canvas implementation supports webp output.
+   */
+  public static isWebPSupported(): boolean {
+    const canvas: HTMLCanvasElement = document.createElement('canvas');
+    if (!!(canvas.getContext && canvas.getContext('2d'))) {
+      return canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+    }
+    return false;
+  }
+
+  /**
    * Destroys the current asset bitmap object and frees all memory in use.
    */
   public destroy(): void {
