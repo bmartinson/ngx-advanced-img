@@ -679,7 +679,7 @@ export class NgxAdvancedImgBitmap {
         // load the image
         this.image.src = url
       } else {
-        this.image.src = url = URL.createObjectURL(this.src);
+        this.image.src = URL.createObjectURL(this.src);
 
         // store the original blob file size
         this._initialFileSize = this.src.size;
