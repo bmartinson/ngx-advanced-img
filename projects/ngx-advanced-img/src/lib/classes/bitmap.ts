@@ -512,6 +512,10 @@ export class NgxAdvancedImgBitmap {
                 return;
               }
 
+              // Enable image smoothing
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'high';
+
               ctx.drawImage(this.image, 0, 0);
 
               // if we haven't loaded anonymously, we'll taint the canvas and crash the application
