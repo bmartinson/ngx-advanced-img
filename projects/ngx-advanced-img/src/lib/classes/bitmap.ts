@@ -30,10 +30,20 @@ export interface INgxAdvancedImgBitmapInfo {
   exifData: any;
 }
 
+export interface INgxAdvancedImgOptimizationOptions {
+  sizeLimit?: number | undefined, // the maximum size of the image in bytes, if exceeded, the image will be optimized further
+  minDimension?: number | undefined, // minimum dimension we will reduce to during optimization
+  minScale?: number | undefined, // minimum scale we will reduce to during optimization
+  minQuality?: number | undefined, // minimum quality we will reduce to during optimization
+  mode?: 'retain-size' | 'retain-quality' | 'prefer-size' | 'prefer-quality' | 'alternating-preference' | undefined,
+  strict?: boolean, // if true, false by default, then the function will throw an error if the size limit cannot be achieved
+}
+
 export class NgxAdvancedImgBitmap {
 
   private static ITERATION_FACTOR = 0.025;
   private static QUALITY_FACTOR = 0.5;
+  private static SYSTEM_CANVAS: HTMLCanvasElement | undefined;
 
   public resolution: NgxAdvancedImgResolution;
   public src: string | Blob;
@@ -214,29 +224,6 @@ export class NgxAdvancedImgBitmap {
   }
 
   /**
-   * Standard function to convert a HEIC image to a different format for further processing.
-   *
-   * @param heic The HEIC file to convert.
-   * @param format The format to convert the HEIC file to.
-   */
-  private static convertHEIC(blob: Blob, format: 'image/jpeg' | 'image/png'): Promise<Blob> {
-    return heic2any({
-      blob: blob,      // Input HEIC File object
-      toType: format, // Desired output format
-    }).then((convertedBlob: Blob | Blob[]) => {
-      // use first image if HEIC file contains multiple images
-      if (Array.isArray(convertedBlob)) {
-        convertedBlob = convertedBlob[0];
-      }
-
-      return convertedBlob;
-    }).catch((error: any) => {
-      console.error('Error during HEIC to JPEG conversion:', error);
-      return Promise.reject(error);
-    });
-  }
-
-  /**
    * Standard function for extracting file information from a Blob.
    *
    * @param data Blob data that can be assessed.
@@ -352,14 +339,39 @@ export class NgxAdvancedImgBitmap {
   /**
    * Helper function to see if webp output is supported.
    *
-   * @returns True if the canvas implementation supports webp output.
+   * @param mimeType The mimeType to check for support.
    */
-  public static isWebPSupported(): boolean {
-    const canvas: HTMLCanvasElement = document.createElement('canvas');
-    if (!!(canvas.getContext && canvas.getContext('2d'))) {
-      return canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+  public static isMimeTypeSupported(mimeType: string): boolean {
+    this.SYSTEM_CANVAS = this.SYSTEM_CANVAS || document.createElement('canvas');
+
+    if (!!(this.SYSTEM_CANVAS.getContext && this.SYSTEM_CANVAS.getContext('2d'))) {
+      return this.SYSTEM_CANVAS.toDataURL(mimeType).indexOf(`data:${mimeType}`) === 0;
     }
+
     return false;
+  }
+
+  /**
+   * Standard function to convert a HEIC image to a different format for further processing.
+   *
+   * @param heic The HEIC file to convert.
+   * @param format The format to convert the HEIC file to.
+   */
+  private static convertHEIC(blob: Blob, format: 'image/jpeg' | 'image/png'): Promise<Blob> {
+    return heic2any({
+      blob: blob,      // Input HEIC File object
+      toType: format, // Desired output format
+    }).then((convertedBlob: Blob | Blob[]) => {
+      // use first image if HEIC file contains multiple images
+      if (Array.isArray(convertedBlob)) {
+        convertedBlob = convertedBlob[0];
+      }
+
+      return convertedBlob;
+    }).catch((error: any) => {
+      console.error('Error during HEIC to JPEG conversion:', error);
+      return Promise.reject(error);
+    });
   }
 
   /**
@@ -397,7 +409,7 @@ export class NgxAdvancedImgBitmap {
   public async load(anonymous = true, allowXMLLoading = true): Promise<NgxAdvancedImgBitmap> {
     // if no valid source, then reject the load
     if (!this.src) {
-      return Promise.reject();
+      return Promise.reject(new Error('No valid source provided'));
     }
 
     // HEICs need to be converted before loading
@@ -519,7 +531,7 @@ export class NgxAdvancedImgBitmap {
               ctx.drawImage(this.image, 0, 0);
 
               // if we haven't loaded anonymously, we'll taint the canvas and crash the application
-              let dataUri: string = (anonymous) ? canvas.toDataURL(this._mimeType, 100) : '';
+              let dataUri: string = (anonymous) ? canvas.toDataURL(this._mimeType, 1) : '';
 
               if (typeof this.src === 'string') {
                 // store the exif data
@@ -746,24 +758,27 @@ export class NgxAdvancedImgBitmap {
    * If the image is loaded, this function will optimize the image to the
    * desired quality and type and return a data url of bitmap information.
    *
-   * @param quality The quality of the image optimization.
    * @param type The type of file output we would like to generate.
+   * @param quality The quality of the image optimization.
    * @param resizeFactor The scaling factor to reduce the size of the image.
-   * @param maxDimension If provided, the maximum pixels allowed for x/y dimension in the size of the image.
-   * @param sizeLimit The maximum size of the image in bytes, if exceeded, the image will be optimized further.
-   * @param mode Describes the optimization mode to attempt. Focus on retaining size, quality, or a balance between them all.
-   * @param strict If true, false by default, then the function will throw an error if the size limit cannot be achieved.
+   * @param maxDimension If provided, the maximum pixels allowed for x/y dimension in the size of the image. Invokes a resize.
+   * @param options The optimization options to use when we want to optimize the image to a specified byte size.
    */
   public async optimize(
-    quality: number,
     type: string,
+    quality: number,
     resizeFactor: number = 1,
-    maxDimension?: number | undefined, // 16,384 is a reasonable safe limit for most browsers
-    sizeLimit?: number | undefined,
-    mode?: 'classic' | 'prefer-quality' | 'prefer-size' | 'balanced' | 'hardcore' | undefined,
-    strict?: boolean,
+    maxDimension?: number | undefined, // the image will be resized to fit within this max dimension before any further optimization
+    options?: INgxAdvancedImgOptimizationOptions,
   ): Promise<INgxAdvancedImgBitmapOptimization> {
-    return this._optimize(quality, type, resizeFactor, maxDimension, sizeLimit, mode, undefined, strict);
+    return this._optimize(
+      type,
+      quality,
+      resizeFactor,
+      maxDimension,
+      options,
+      undefined,
+    );
   }
 
   /**
@@ -774,23 +789,21 @@ export class NgxAdvancedImgBitmap {
    * attempt optimizations in balanced and hardcore modes by tracking last op
    * without showing lastOp for the user of this function.
    *
-   * @param quality The quality of the image optimization.
    * @param type The type of file output we would like to generate.
+   * @param quality The quality of the image optimization.
    * @param resizeFactor The scaling factor to reduce the size of the image.
-   * @param maxDimension If provided, the maximum pixels allowed for x/y dimension in the size of the image.
-   * @param sizeLimit The maximum size of the image in bytes, if exceeded, the image will be optimized further.
-   * @param mode Describes the optimization mode to attempt. Focus on retaining size, quality, or a balance between them all.
-   * @param strict If true, false by default, then the function will throw an error if the size limit cannot be achieved.
+   * @param maxDimension If provided, the maximum pixels allowed for x/y dimension in the size of the image. Invokes a resize.
+   * @param options The optimization options to use when we want to optimize the image to a specified byte size.
+   * @param lastOp The last operation that was performed in the optimization process.
    */
   private async _optimize(
-    quality: number,
     type: string,
+    quality: number,
     resizeFactor: number = 1,
-    maxDimension?: number | undefined, // 16,384 is a reasonable safe limit for most browsers
-    sizeLimit?: number | undefined,
-    mode?: 'classic' | 'prefer-quality' | 'prefer-size' | 'balanced' | 'hardcore' | undefined,
+    maxDimension?: number | undefined,
+    options?: INgxAdvancedImgOptimizationOptions,
     lastOp?: 'quality' | 'scale' | undefined,
-    strict?: boolean,
+    lastSize?: number,
   ): Promise<INgxAdvancedImgBitmapOptimization> {
     return new Promise((resolve: (value: INgxAdvancedImgBitmapOptimization) => void) => {
       if (
@@ -808,6 +821,40 @@ export class NgxAdvancedImgBitmap {
       let canvas: HTMLCanvasElement | null = document.createElement('canvas');
       let width: number = canvas.width = this.image.width * resizeFactor;
       let height: number = canvas.height = this.image.height * resizeFactor;
+      let minThresholdReached = false;
+
+      // cap the size of the canvas in accordance with te minDimension constraints for optimization
+      if (
+        resizeFactor < 1 &&
+        typeof options?.minDimension === 'number' &&
+        !isNaN(options?.minDimension) &&
+        isFinite(options?.minDimension) &&
+        options?.minDimension > 0 &&
+        (canvas.width < options?.minDimension || canvas.height < options?.minDimension)
+      ) {
+        let minDimensionAspectRatio = canvas.width / canvas.height;
+
+        if (canvas.width > canvas.height) {
+          height = canvas.height = options?.minDimension;
+          width = canvas.width = options?.minDimension * minDimensionAspectRatio;
+        } else {
+          minDimensionAspectRatio = canvas.height / canvas.width;
+          width = canvas.width = options?.minDimension;
+          height = canvas.height = options?.minDimension * minDimensionAspectRatio;
+        }
+
+        minThresholdReached = true;
+      }
+
+      if (
+        typeof options?.minQuality === 'number' &&
+        !isNaN(options?.minQuality) &&
+        isFinite(options?.minQuality) &&
+        options?.minQuality >= 0 &&
+        quality < options?.minQuality
+      ) {
+        minThresholdReached = true;
+      }
 
       // scale the image down based on the max allowed pixel dimension
       if (
@@ -817,13 +864,13 @@ export class NgxAdvancedImgBitmap {
         maxDimension > 0
       ) {
         if (canvas.width > maxDimension) {
-          canvas.height = canvas.height * (maxDimension / canvas.width);
-          canvas.width = maxDimension;
+          height = canvas.height = canvas.height * (maxDimension / canvas.width);
+          width = canvas.width = maxDimension;
         }
 
         if (canvas.height > maxDimension) {
-          canvas.width = canvas.width * (maxDimension / canvas.height);
-          canvas.height = maxDimension;
+          height = canvas.width = canvas.width * (maxDimension / canvas.height);
+          width = canvas.height = maxDimension;
         }
       }
 
@@ -860,16 +907,15 @@ export class NgxAdvancedImgBitmap {
         throw new Error('An error occurred while drawing to the canvas');
       }
 
-      if (typeof sizeLimit === 'number' && !isNaN(sizeLimit) && isFinite(sizeLimit) && sizeLimit > 0) {
+      if (typeof options?.sizeLimit === 'number' && !isNaN(options?.sizeLimit) && isFinite(options?.sizeLimit) && options?.sizeLimit > 0) {
         const head: string = `data:${type};base64,`;
         const fileSize: number = Math.round(atob(dataUri.substring(head.length)).length);
 
         if (this.debug) {
-          console.warn('Image Optimization Factors:', mode, quality, resizeFactor, `${fileSize} B`);
+          console.warn('Image Optimization Factors:', options?.mode, quality, resizeFactor, `${fileSize} B`);
         }
 
-        if (fileSize > sizeLimit) {
-
+        if (fileSize > options?.sizeLimit && fileSize !== lastSize) {
           if (resizeFactor === undefined) {
             // if the resize factor wasn't supplied set to 1
             resizeFactor = 1;
@@ -881,10 +927,17 @@ export class NgxAdvancedImgBitmap {
 
           let qualityFloor = 0.025;
           let scaleFloor = 0.025;
-          let preferredOp: 'prefer-size' | 'prefer-quality' = 'prefer-size';
+          let preferredOp: 'prefer-size' | 'prefer-quality';
 
-          switch (mode) {
-            case 'balanced':
+          // Ensure that minQuality is adhered
+          if (options?.minQuality) {
+            qualityFloor = options?.minQuality;
+            qualityFloor = (qualityFloor < 0) ? 0 : (qualityFloor > 1) ? 1 : qualityFloor;
+          }
+
+          //   mode?: 'retain-size' | 'retain-quality' | 'prefer-size' | 'prefer-quality' | 'alternating-preference' | undefined,
+          switch (options?.mode) {
+            case 'alternating-preference':
               if (lastOp === 'quality') {
                 preferredOp = 'prefer-size';
                 lastOp = 'scale';
@@ -894,32 +947,29 @@ export class NgxAdvancedImgBitmap {
               }
               break;
 
-            case 'hardcore':
-              if (lastOp === 'quality') {
-                preferredOp = 'prefer-size';
-                lastOp = 'scale';
-              } else {
-                preferredOp = 'prefer-quality'
-                lastOp = 'quality';
-              }
+            case 'retain-size':
+              scaleFloor = 1;
+
+              preferredOp = 'prefer-quality';
+              lastOp = 'quality';
+
               break;
 
             case 'prefer-size':
+            default:
               preferredOp = 'prefer-size';
-              lastOp = 'quality';
+              lastOp = 'scale';
+              break;
+
+            case 'retain-quality':
+              qualityFloor = 1;
+
+              preferredOp = 'prefer-size';
+              lastOp = 'scale';
               break;
 
             case 'prefer-quality':
               preferredOp = 'prefer-quality';
-              lastOp = 'scale';
-              break;
-
-            default:
-            case 'classic':
-              qualityFloor = 0.8;
-              scaleFloor = 0.1;
-
-              preferredOp = 'prefer-size';
               lastOp = 'quality';
               break;
           }
@@ -931,7 +981,7 @@ export class NgxAdvancedImgBitmap {
           switch (preferredOp) {
             case 'prefer-quality':
               // base case if we are at our bottom quality and resize factor, resolve
-              if (!strict && quality === qualityFloor && resizeFactor === scaleFloor) {
+              if (!options?.strict && (quality === qualityFloor && resizeFactor === scaleFloor) || minThresholdReached) {
                 const exifData: any = JSON.parse(JSON.stringify(this.exifData));
 
                 exifData['ExifImageWidth'] = width;
@@ -953,16 +1003,15 @@ export class NgxAdvancedImgBitmap {
                   resizeFactor = scaleFloor;
                 }
 
-
                 // if the quality is too high, reduce it and try again
-                this._optimize(quality, type, resizeFactor, maxDimension, sizeLimit, mode, lastOp, strict).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
+                this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp, fileSize).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
 
                 return;
               }
 
               // we've reduced scale, let's reduce image size
               if (quality < qualityFloor) {
-                if (strict) {
+                if (options?.strict) {
                   throw new Error('The requested image optimization cannot be achieved');
                 }
 
@@ -970,13 +1019,15 @@ export class NgxAdvancedImgBitmap {
                 quality = qualityFloor;
               }
 
-              this._optimize(quality, type, resizeFactor, maxDimension, sizeLimit, mode, lastOp, strict).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
+              quality = quality - ((NgxAdvancedImgBitmap.QUALITY_FACTOR / (options?.sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR));
+
+              this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp, fileSize).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
 
               return;
 
             case 'prefer-size':
               // base case if we are at our bottom quality and resize factor, resolve
-              if (!strict && quality === qualityFloor && resizeFactor === scaleFloor) {
+              if (!options?.strict && (quality === qualityFloor && resizeFactor === scaleFloor) || minThresholdReached) {
                 const exifData: any = JSON.parse(JSON.stringify(this.exifData));
 
                 exifData['ExifImageWidth'] = width;
@@ -990,8 +1041,9 @@ export class NgxAdvancedImgBitmap {
                 return;
               }
 
+              console.warn('quality floor', quality, qualityFloor);
               if (quality > qualityFloor) {
-                quality = quality - ((NgxAdvancedImgBitmap.QUALITY_FACTOR / (sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR));
+                quality = quality - ((NgxAdvancedImgBitmap.QUALITY_FACTOR / (options?.sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR));
 
                 if (quality < qualityFloor) {
                   // keep it within a given quality floor
@@ -999,7 +1051,7 @@ export class NgxAdvancedImgBitmap {
                 }
 
                 // if the quality is too high, reduce it and try again
-                this._optimize(quality, type, resizeFactor, maxDimension, sizeLimit, mode, lastOp, strict).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
+                this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp, fileSize).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
 
                 return;
               }
@@ -1007,7 +1059,7 @@ export class NgxAdvancedImgBitmap {
               // we've reduced quality, let's reduce image size
               resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
               if (resizeFactor < scaleFloor) {
-                if (strict) {
+                if (options?.strict) {
                   throw new Error('The requested image optimization cannot be achieved');
                 }
 
@@ -1015,7 +1067,9 @@ export class NgxAdvancedImgBitmap {
                 resizeFactor = scaleFloor;
               }
 
-              this._optimize(quality, type, resizeFactor, maxDimension, sizeLimit, mode, lastOp, strict).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
+              resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
+
+              this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
 
               return;
           }
@@ -1040,7 +1094,7 @@ export class NgxAdvancedImgBitmap {
    */
   private async adjustForExifOrientation(): Promise<void> {
     if (!this.image) {
-      return Promise.reject();
+      return Promise.reject(new Error('Image not loaded'));
     }
 
     try {
@@ -1050,7 +1104,7 @@ export class NgxAdvancedImgBitmap {
       this._orientation = 1;
     }
 
-    if (this._orientation === undefined || this._orientation === null) {
+    if (this._orientation != null) {
       // assume normal orientation if none can be found based on exif info
       this._orientation = 1;
     }
@@ -1078,7 +1132,7 @@ export class NgxAdvancedImgBitmap {
    */
   private async getImageBlob(url: string): Promise<Blob> {
     if (!this.image) {
-      return Promise.reject();
+      return Promise.reject(new Error('Image not loaded'));
     }
 
     const headers: Headers = new Headers();

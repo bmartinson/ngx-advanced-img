@@ -15,7 +15,7 @@ export class AppComponent {
   public maxDimension: number = 16384;
   public strictMode: boolean = false;
   public retainMimeType: boolean = false;
-  public mode: 'classic' | 'prefer-size' | 'prefer-quality' | 'balanced' | 'hardcore' = 'classic';
+  public mode: 'retain-size' | 'retain-quality' | 'prefer-size' | 'prefer-quality' | 'alternating-preference' = 'prefer-size';
 
   public constructor() {
   }
@@ -95,7 +95,7 @@ export class AppComponent {
     // if not retaining mime type, let's use webp by default
     let defaultMimeType = "image/webp";
 
-    if (!this.retainMimeType && !NgxAdvancedImgBitmap.isWebPSupported()) {
+    if (!this.retainMimeType && !NgxAdvancedImgBitmap.isMimeTypeSupported('image/webp')) {
       this.prettyLog(['image/webp output is not supported by your browser....using image/jpeg instead.'], 'error');
 
       // switch to use jpeg for fast optimization
@@ -133,7 +133,14 @@ export class AppComponent {
               ]);
 
               performance.mark('optimization_start');
-              bitmap.optimize(+this.quality, mimeType, +this.scale / 100, +this.maxDimension, this.size ? +this.size : undefined, this.mode, !!this.strictMode).then((data: INgxAdvancedImgBitmapOptimization) => {
+              bitmap.optimize(mimeType, +this.quality, +this.scale / 100, +this.maxDimension, {
+                sizeLimit: this.size ? +this.size : undefined,
+                minDimension: 2000,
+                minScale: 0.025,
+                minQuality: 0.8,
+                mode: this.mode,
+                strict: !!this.strictMode
+              }).then((data: INgxAdvancedImgBitmapOptimization) => {
                 performance.mark('optimization_end');
                 performance.measure('Image Optimization', 'optimization_start', 'optimization_end');
 

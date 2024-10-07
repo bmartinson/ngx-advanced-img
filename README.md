@@ -85,13 +85,16 @@ bitmap.load().finally(() => {
   console.log('bitmap loaded with size (B):', bitmap.fileSize);
 
   bitmap.optimize(
-    +this.quality,
     bitmap.mimeType,
+    +this.quality,
     +this.scale / 100,
     +this.maxDimension,
-    this.size ? +this.size : undefined,
-    this.mode,
-    !!this.strictMode,
+    {
+      sizeLimit: +this.size,
+      mode: this.mode,
+      strict: !!this.strictMode,
+    },
+    options?: INgxAdvancedImgOptimizationOptions,
   ).then((data: INgxAdvancedImgBitmapOptimization) => {
     // ... save the file? use that resultant data in other canvases?
   }).catch(() => {
@@ -100,18 +103,23 @@ bitmap.load().finally(() => {
 });
 ```
 
-- `quality` - A number between 0-1 that indicates the encoding quality to use (or start with if limiting by size).
 - `type` - The mime type for the resultant data (e.g. `image/jpeg`, `image/png`, etc.)
+- `quality` - A number between 0-1 that indicates the encoding quality to use (or start with if limiting by size).
 - `resizeFactor` - Optional parameter that will scale the physical size of the image by this factor.
 - `maxDimension` - Optional parameter that will limit the maximum dimension (width/height) of the image to while retaining aspect ratio.
-- `sizeLimit` - Optional parameter that will attempt to reduce the resultant file output size to this size in bytes.
+- `options` - Optional parameter that drives optimization options. When provided, the optimize algorithm will attempt to perform the optimization in accordance with the provided mode to achieve a size within the limit of the `sizeLimit`.
 - `mode` - (`prefer-quality` | `prefer-size` | `balanced` | `hardcore`) - Optional parameter that specifies what size limiting mode to use. Default is `balanced`.
-  - `classic` - Uses the `prefer-quality` approach but sets reasonable thresholds for scale and size thresholds.
-  - `prefer-quality` - Reduces the size of the image first until a threshold is achieved. Then it starts to reduce quality after that to try and achieve the `sizeLimit`.
-  - `prefer-size` - Reduces the quality of the image first until a threshold is achieved. Then it starts to reduce size after that to try and achieve the `sizeLimit`.
-  - `balanced` - Alternates between adjusting quality and size while retaining reasonable thresholds of modification.
-  - `hardcore` - Alternates between adjusting quality and size without regards to reasonable limits. It will go as far as making an image have 0.025 quality and 0.025x the scale of the original image.
-- `strict` - Optional parameter, if set to true, will throw an exception if a given `sizeLimit` is unobtainable. If set to false, the optimization will return whatever data it can generate as close to the size limit as possible.
+  - `sizeLimit` - The maximum number of bytes we would like the resultant image to be.
+  - `minDimension` - The minimum dimension that the photo will be optimized to.
+  - `minScale` - The minimum scaling factor that will be used while optimizing.
+  - `minQuality` - The minimum quality that will be used while optimizing.
+  - `mode` - The optimization algorithm to use to try and achieve the `sizeLimit` threshold.
+    - `prefer-quality` - Reduces the size of the image first until a threshold is achieved. Then it starts to reduce quality after that to try and achieve the `sizeLimit`.
+    - `prefer-size` - Reduces the quality of the image first until a threshold is achieved. Then it starts to reduce size after that to try and achieve the `sizeLimit`.
+    - `retain-quality` - Reduces the size of the photo only in order to try and achieve the `sizeLimit` threshold.
+    - `retain-size` - Reduces the quality of the photo only in order to try and achieve the `sizeLimit` threshold.
+    - `alternating-preference` - Alternates between adjusting quality and size. This is usually the slowest method.
+  - `strict` - Optional parameter, if set to true, will throw an exception if a given `sizeLimit` is unobtainable. If set to false, the optimization will return whatever data it can generate as close to the size limit as possible.
 
 **Important Note**
 
