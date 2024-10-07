@@ -135,8 +135,8 @@ export class AppComponent {
               performance.mark('optimization_start');
               bitmap.optimize(mimeType, +this.quality, +this.scale / 100, +this.maxDimension, {
                 sizeLimit: this.size ? +this.size : undefined,
-                minDimension: 2000,
-                minScale: 0.025,
+                minDimension: 100,
+                minScale: 0.5,
                 minQuality: 0.8,
                 mode: this.mode,
                 strict: !!this.strictMode

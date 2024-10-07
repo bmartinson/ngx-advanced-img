@@ -856,6 +856,16 @@ export class NgxAdvancedImgBitmap {
         minThresholdReached = true;
       }
 
+      if (
+        typeof options?.minScale === 'number' &&
+        !isNaN(options?.minScale) &&
+        isFinite(options?.minScale) &&
+        options?.minScale >= 0 &&
+        resizeFactor < options?.minScale
+      ) {
+        minThresholdReached = true;
+      }
+
       // scale the image down based on the max allowed pixel dimension
       if (
         typeof maxDimension === 'number' &&
@@ -864,12 +874,14 @@ export class NgxAdvancedImgBitmap {
         maxDimension > 0
       ) {
         if (canvas.width > maxDimension) {
-          height = canvas.height = canvas.height * (maxDimension / canvas.width);
+          resizeFactor = maxDimension / canvas.width;
+          height = canvas.height = canvas.height * resizeFactor;
           width = canvas.width = maxDimension;
         }
 
         if (canvas.height > maxDimension) {
-          height = canvas.width = canvas.width * (maxDimension / canvas.height);
+          resizeFactor = maxDimension / canvas.height;
+          height = canvas.width = canvas.width * resizeFactor;
           width = canvas.height = maxDimension;
         }
       }
@@ -933,6 +945,12 @@ export class NgxAdvancedImgBitmap {
           if (options?.minQuality) {
             qualityFloor = options?.minQuality;
             qualityFloor = (qualityFloor < 0) ? 0 : (qualityFloor > 1) ? 1 : qualityFloor;
+          }
+
+          // Ensure that minScale is adhered
+          if (options?.minScale) {
+            scaleFloor = options?.minScale;
+            scaleFloor = (scaleFloor < 0) ? 0 : (scaleFloor > 1) ? 1 : scaleFloor;
           }
 
           //   mode?: 'retain-size' | 'retain-quality' | 'prefer-size' | 'prefer-quality' | 'alternating-preference' | undefined,
@@ -1041,7 +1059,6 @@ export class NgxAdvancedImgBitmap {
                 return;
               }
 
-              console.warn('quality floor', quality, qualityFloor);
               if (quality > qualityFloor) {
                 quality = quality - ((NgxAdvancedImgBitmap.QUALITY_FACTOR / (options?.sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR));
 
