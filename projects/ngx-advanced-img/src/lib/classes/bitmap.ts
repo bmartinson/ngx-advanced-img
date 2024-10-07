@@ -42,7 +42,7 @@ export interface INgxAdvancedImgOptimizationOptions {
 export class NgxAdvancedImgBitmap {
 
   private static ITERATION_FACTOR = 0.025;
-  private static QUALITY_FACTOR = 2;
+  private static QUALITY_FACTOR = .5;
   private static SYSTEM_CANVAS: HTMLCanvasElement | undefined;
 
   public resolution: NgxAdvancedImgResolution;
