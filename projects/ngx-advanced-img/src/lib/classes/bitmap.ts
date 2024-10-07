@@ -42,7 +42,7 @@ export interface INgxAdvancedImgOptimizationOptions {
 export class NgxAdvancedImgBitmap {
 
   private static ITERATION_FACTOR = 0.025;
-  private static QUALITY_FACTOR = 0.5;
+  private static QUALITY_FACTOR = 2;
   private static SYSTEM_CANVAS: HTMLCanvasElement | undefined;
 
   public resolution: NgxAdvancedImgResolution;
@@ -542,6 +542,14 @@ export class NgxAdvancedImgBitmap {
 
               // if we got the bitmap data, create the link to download and invoke it
               if (dataUri) {
+                // clear any existing object urls as necessary
+                if (this._objectURL) {
+                  try {
+                    domURL.revokeObjectURL(this._objectURL);
+                  } catch (error) {
+                  }
+                }
+
                 // get the bitmap data in blob format
                 this._objectURL = domURL.createObjectURL(NgxAdvancedImgBitmap.dataURItoBlob(dataUri));
               }
@@ -641,6 +649,14 @@ export class NgxAdvancedImgBitmap {
                     // the image has successfully loaded
                     resolve(this);
                   };
+
+                  // clear any existing object urls as necessary
+                  if (this._objectURL) {
+                    try {
+                      domURL.revokeObjectURL(this._objectURL);
+                    } catch (error) {
+                    }
+                  }
 
                   this.image.loading = 'eager';
                   this.image.src = this._objectURL = domURL.createObjectURL(svg);
@@ -1021,6 +1037,14 @@ export class NgxAdvancedImgBitmap {
                   resizeFactor = scaleFloor;
                 }
 
+                // clear any existing object urls as necessary
+                if (objectURL) {
+                  try {
+                    domURL.revokeObjectURL(objectURL);
+                  } catch (error) {
+                  }
+                }
+
                 // if the quality is too high, reduce it and try again
                 this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp, fileSize).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
 
@@ -1038,6 +1062,14 @@ export class NgxAdvancedImgBitmap {
               }
 
               quality = quality - ((NgxAdvancedImgBitmap.QUALITY_FACTOR / (options?.sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR));
+
+              // clear any existing object urls as necessary
+              if (objectURL) {
+                try {
+                  domURL.revokeObjectURL(objectURL);
+                } catch (error) {
+                }
+              }
 
               this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp, fileSize).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
 
@@ -1067,6 +1099,14 @@ export class NgxAdvancedImgBitmap {
                   quality = qualityFloor;
                 }
 
+                // clear any existing object urls as necessary
+                if (objectURL) {
+                  try {
+                    domURL.revokeObjectURL(objectURL);
+                  } catch (error) {
+                  }
+                }
+
                 // if the quality is too high, reduce it and try again
                 this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp, fileSize).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
 
@@ -1085,6 +1125,14 @@ export class NgxAdvancedImgBitmap {
               }
 
               resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
+
+              // clear any existing object urls as necessary
+              if (objectURL) {
+                try {
+                  domURL.revokeObjectURL(objectURL);
+                } catch (error) {
+                }
+              }
 
               this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
 
