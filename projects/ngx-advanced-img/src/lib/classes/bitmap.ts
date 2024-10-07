@@ -43,6 +43,7 @@ export class NgxAdvancedImgBitmap {
 
   private static ITERATION_FACTOR = 0.025;
   private static QUALITY_FACTOR = .5;
+  private static PREDICTION_FACTOR = .275; // how much we scale back our quality prediction since the mathematical function is not perfect
   private static SYSTEM_CANVAS: HTMLCanvasElement | undefined;
 
   public resolution: NgxAdvancedImgResolution;
@@ -1061,7 +1062,7 @@ export class NgxAdvancedImgBitmap {
                 quality = qualityFloor;
               }
 
-              quality = quality - ((NgxAdvancedImgBitmap.QUALITY_FACTOR / (options?.sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR));
+              quality = quality - (((options?.sizeLimit ? (fileSize / options?.sizeLimit) * NgxAdvancedImgBitmap.PREDICTION_FACTOR : NgxAdvancedImgBitmap.QUALITY_FACTOR) / (options?.sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR));
 
               // clear any existing object urls as necessary
               if (objectURL) {
@@ -1092,7 +1093,7 @@ export class NgxAdvancedImgBitmap {
               }
 
               if (quality > qualityFloor) {
-                quality = quality - ((NgxAdvancedImgBitmap.QUALITY_FACTOR / (options?.sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR));
+                quality = quality - (((options?.sizeLimit ? (fileSize / options?.sizeLimit) * NgxAdvancedImgBitmap.PREDICTION_FACTOR : NgxAdvancedImgBitmap.QUALITY_FACTOR) / (options?.sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR));
 
                 if (quality < qualityFloor) {
                   // keep it within a given quality floor
