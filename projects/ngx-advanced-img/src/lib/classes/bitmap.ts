@@ -944,7 +944,10 @@ export class NgxAdvancedImgBitmap {
           console.warn('Image Optimization Factors:', options?.mode, quality, resizeFactor, `${fileSize} B`);
         }
 
-        if (fileSize > options?.sizeLimit && fileSize !== lastSize) {
+        if (
+          fileSize > options?.sizeLimit &&
+          (!lastSize || (lastSize && Math.ceil(fileSize) !== Math.ceil(lastSize))) // consider rounding errors
+        ) {
           if (resizeFactor === undefined) {
             // if the resize factor wasn't supplied set to 1
             resizeFactor = 1;
