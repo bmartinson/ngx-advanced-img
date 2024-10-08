@@ -891,12 +891,14 @@ export class NgxAdvancedImgBitmap {
         maxDimension > 0
       ) {
         if (canvas.width > maxDimension) {
+          console.warn('resize factor change for width cap', resizeFactor, maxDimension / canvas.height, maxDimension, canvas.height * (maxDimension / canvas.width));
           resizeFactor = maxDimension / canvas.width;
           height = canvas.height = canvas.height * resizeFactor;
           width = canvas.width = maxDimension;
         }
 
         if (canvas.height > maxDimension) {
+          console.warn('resize factor change for height cap', resizeFactor, maxDimension / canvas.height, canvas.width * (maxDimension / canvas.height), maxDimension);
           resizeFactor = maxDimension / canvas.height;
           width = canvas.width = canvas.width * resizeFactor;
           height = canvas.height = maxDimension;
@@ -946,7 +948,7 @@ export class NgxAdvancedImgBitmap {
 
         if (
           fileSize > options?.sizeLimit &&
-          (!lastSize || (lastSize && Math.ceil(fileSize) !== Math.ceil(lastSize))) // consider rounding errors
+          (!lastSize || (lastSize && Math.ceil(fileSize) >= Math.ceil(lastSize))) // consider rounding errors
         ) {
           if (resizeFactor === undefined) {
             // if the resize factor wasn't supplied set to 1
@@ -973,7 +975,6 @@ export class NgxAdvancedImgBitmap {
             scaleFloor = (scaleFloor < 0) ? 0 : (scaleFloor > 1) ? 1 : scaleFloor;
           }
 
-          //   mode?: 'retain-size' | 'retain-quality' | 'prefer-size' | 'prefer-quality' | 'alternating-preference' | undefined,
           switch (options?.mode) {
             case 'alternating-preference':
               if (lastOp === 'quality') {
