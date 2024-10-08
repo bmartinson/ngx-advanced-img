@@ -891,17 +891,15 @@ export class NgxAdvancedImgBitmap {
         maxDimension > 0
       ) {
         if (canvas.width > maxDimension) {
-          console.warn('resize factor change for width cap', resizeFactor, maxDimension / canvas.height, maxDimension, canvas.height * (maxDimension / canvas.width));
-          resizeFactor = maxDimension / canvas.width;
           height = canvas.height = canvas.height * resizeFactor;
           width = canvas.width = maxDimension;
+          resizeFactor = maxDimension / this.image.width;
         }
 
         if (canvas.height > maxDimension) {
-          console.warn('resize factor change for height cap', resizeFactor, maxDimension / canvas.height, canvas.width * (maxDimension / canvas.height), maxDimension);
-          resizeFactor = maxDimension / canvas.height;
           width = canvas.width = canvas.width * resizeFactor;
           height = canvas.height = maxDimension;
+          resizeFactor = maxDimension / this.image.height;
         }
       }
 
@@ -948,7 +946,7 @@ export class NgxAdvancedImgBitmap {
 
         if (
           fileSize > options?.sizeLimit &&
-          (!lastSize || (lastSize && Math.ceil(fileSize) >= Math.ceil(lastSize))) // consider rounding errors
+          (!lastSize || (lastSize && Math.ceil(fileSize) <= Math.ceil(lastSize))) // consider rounding errors
         ) {
           if (resizeFactor === undefined) {
             // if the resize factor wasn't supplied set to 1
@@ -994,12 +992,6 @@ export class NgxAdvancedImgBitmap {
 
               break;
 
-            case 'prefer-size':
-            default:
-              preferredOp = 'prefer-size';
-              lastOp = 'scale';
-              break;
-
             case 'retain-quality':
               qualityFloor = 1;
 
@@ -1009,6 +1001,13 @@ export class NgxAdvancedImgBitmap {
 
             case 'prefer-quality':
               preferredOp = 'prefer-quality';
+              lastOp = 'scale';
+
+              break;
+
+            case 'prefer-size':
+            default:
+              preferredOp = 'prefer-size';
               lastOp = 'quality';
               break;
           }
@@ -1020,7 +1019,7 @@ export class NgxAdvancedImgBitmap {
           switch (preferredOp) {
             case 'prefer-quality':
               // base case if we are at our bottom quality and resize factor, resolve
-              if (!options?.strict && (quality === qualityFloor && resizeFactor === scaleFloor) || minThresholdReached) {
+              if (!options?.strict && (quality <= qualityFloor && resizeFactor <= scaleFloor) || minThresholdReached) {
                 const exifData: any = JSON.parse(JSON.stringify(this.exifData));
 
                 exifData['ExifImageWidth'] = width;
@@ -1082,7 +1081,7 @@ export class NgxAdvancedImgBitmap {
 
             case 'prefer-size':
               // base case if we are at our bottom quality and resize factor, resolve
-              if (!options?.strict && (quality === qualityFloor && resizeFactor === scaleFloor) || minThresholdReached) {
+              if (!options?.strict && (quality <= qualityFloor && resizeFactor <= scaleFloor) || minThresholdReached) {
                 const exifData: any = JSON.parse(JSON.stringify(this.exifData));
 
                 exifData['ExifImageWidth'] = width;
