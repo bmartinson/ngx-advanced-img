@@ -532,7 +532,7 @@ export class NgxAdvancedImgBitmap {
               ctx.drawImage(this.image, 0, 0);
 
               // if we haven't loaded anonymously, we'll taint the canvas and crash the application
-              let dataUri: string = (anonymous) ? canvas.toDataURL(this._mimeType, 1) : '';
+              let dataUri: string = (anonymous) ? canvas.toDataURL(this._mimeType) : '';
 
               if (typeof this.src === 'string') {
                 // store the exif data
@@ -543,6 +543,14 @@ export class NgxAdvancedImgBitmap {
 
               // if we got the bitmap data, create the link to download and invoke it
               if (dataUri) {
+                // clear any existing object urls as necessary
+                if (this._objectURL) {
+                  try {
+                    domURL.revokeObjectURL(this._objectURL);
+                  } catch (error) {
+                  }
+                }
+
                 // get the bitmap data in blob format
                 this._objectURL = domURL.createObjectURL(NgxAdvancedImgBitmap.dataURItoBlob(dataUri));
               }
@@ -642,6 +650,14 @@ export class NgxAdvancedImgBitmap {
                     // the image has successfully loaded
                     resolve(this);
                   };
+
+                  // clear any existing object urls as necessary
+                  if (this._objectURL) {
+                    try {
+                      domURL.revokeObjectURL(this._objectURL);
+                    } catch (error) {
+                    }
+                  }
 
                   this.image.loading = 'eager';
                   this.image.src = this._objectURL = domURL.createObjectURL(svg);
@@ -1025,6 +1041,14 @@ export class NgxAdvancedImgBitmap {
                   resizeFactor = scaleFloor;
                 }
 
+                // clear any existing object urls as necessary
+                if (objectURL) {
+                  try {
+                    domURL.revokeObjectURL(objectURL);
+                  } catch (error) {
+                  }
+                }
+
                 // if the quality is too high, reduce it and try again
                 this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp, fileSize).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
 
@@ -1042,6 +1066,14 @@ export class NgxAdvancedImgBitmap {
               }
 
               quality = quality - (((options?.sizeLimit ? (fileSize / options?.sizeLimit) * NgxAdvancedImgBitmap.PREDICTION_FACTOR : NgxAdvancedImgBitmap.QUALITY_FACTOR) / (options?.sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR));
+
+              // clear any existing object urls as necessary
+              if (objectURL) {
+                try {
+                  domURL.revokeObjectURL(objectURL);
+                } catch (error) {
+                }
+              }
 
               this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp, fileSize).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
 
@@ -1071,6 +1103,14 @@ export class NgxAdvancedImgBitmap {
                   quality = qualityFloor;
                 }
 
+                // clear any existing object urls as necessary
+                if (objectURL) {
+                  try {
+                    domURL.revokeObjectURL(objectURL);
+                  } catch (error) {
+                  }
+                }
+
                 // if the quality is too high, reduce it and try again
                 this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp, fileSize).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
 
@@ -1089,6 +1129,14 @@ export class NgxAdvancedImgBitmap {
               }
 
               resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
+
+              // clear any existing object urls as necessary
+              if (objectURL) {
+                try {
+                  domURL.revokeObjectURL(objectURL);
+                } catch (error) {
+                }
+              }
 
               this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
 
