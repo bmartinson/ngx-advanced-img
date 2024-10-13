@@ -943,6 +943,7 @@ export class NgxAdvancedImgBitmap {
         }
       } else if (canvas instanceof OffscreenCanvas) {
         blob = await canvas.convertToBlob({ type, quality });
+        objectURL = domURL.createObjectURL(blob);
       }
 
       // clean up the canvas
@@ -952,7 +953,7 @@ export class NgxAdvancedImgBitmap {
         canvas = null;
       }
 
-      if (!objectURL && !blob) {
+      if (!objectURL) {
         throw new Error('An error occurred while drawing to the canvas');
       }
 
