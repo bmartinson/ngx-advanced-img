@@ -822,7 +822,7 @@ export class NgxAdvancedImgBitmap {
     lastOp?: 'quality' | 'scale' | undefined,
     lastSize?: number,
   ): Promise<INgxAdvancedImgBitmapOptimization> {
-    return new Promise((resolve: (value: INgxAdvancedImgBitmapOptimization) => void) => {
+    return new Promise(async (resolve: (value: INgxAdvancedImgBitmapOptimization) => void) => {
       if (
         !this.image ||
         !this.loaded
@@ -835,10 +835,26 @@ export class NgxAdvancedImgBitmap {
       }
 
       // draw the image to the canvas
-      let canvas: HTMLCanvasElement | null = document.createElement('canvas');
-      let width: number = canvas.width = this.image.width * resizeFactor;
-      let height: number = canvas.height = this.image.height * resizeFactor;
+      let width: number = this.image.width * resizeFactor;
+      let height: number = this.image.height * resizeFactor;
       let minThresholdReached = false;
+
+      // Check for OffscreenCanvas support
+      let canvas: HTMLCanvasElement | OffscreenCanvas | null;
+      let ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null; // Declare ctx outside
+
+      if ('OffscreenCanvas' in window) {
+        // Use OffscreenCanvas if supported
+        canvas = new OffscreenCanvas(width, height);
+        ctx = canvas.getContext('2d', { desynchronized: false, willReadFrequently: true });
+        console.log('Using OffscreenCanvas');
+      } else {
+        // Fallback to normal canvas
+        canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        ctx = canvas.getContext('2d', { desynchronized: false, willReadFrequently: true });
+      }
 
       // cap the size of the canvas in accordance with te minDimension constraints for optimization
       if (
@@ -903,8 +919,6 @@ export class NgxAdvancedImgBitmap {
         }
       }
 
-      const ctx: CanvasRenderingContext2D | null = canvas?.getContext('2d', { desynchronized: false, willReadFrequently: true });
-
       ctx?.drawImage(
         this.image,
         0,
@@ -913,8 +927,23 @@ export class NgxAdvancedImgBitmap {
         canvas.height,
       );
 
-      // if we haven't loaded anonymously, we'll taint the canvas and crash the application
-      let dataUri: string = canvas.toDataURL(type, quality);
+      const domURL: any = URL || webkitURL || window.URL;
+      let objectURL = '';
+      let dataUri: string | null = null;
+      let blob: Blob | null = null;
+      
+      if (canvas instanceof HTMLCanvasElement) {
+        // if we haven't loaded anonymously, we'll taint the canvas and crash the application
+        dataUri = canvas.toDataURL(type, quality);
+
+        // if we got the bitmap data, create the link to download and invoke it
+        if (dataUri) {
+          // get the bitmap data
+          objectURL = domURL.createObjectURL(NgxAdvancedImgBitmap.dataURItoBlob(dataUri));
+        }
+      } else if (canvas instanceof OffscreenCanvas) {
+        blob = await canvas.convertToBlob({ type, quality });
+      }
 
       // clean up the canvas
       if (canvas) {
@@ -923,22 +952,22 @@ export class NgxAdvancedImgBitmap {
         canvas = null;
       }
 
-      const domURL: any = URL || webkitURL || window.URL;
-      let objectURL = '';
-
-      // if we got the bitmap data, create the link to download and invoke it
-      if (dataUri) {
-        // get the bitmap data
-        objectURL = domURL.createObjectURL(NgxAdvancedImgBitmap.dataURItoBlob(dataUri));
-      }
-
-      if (!objectURL) {
+      if (!objectURL && !blob) {
         throw new Error('An error occurred while drawing to the canvas');
       }
 
       if (typeof options?.sizeLimit === 'number' && !isNaN(options?.sizeLimit) && isFinite(options?.sizeLimit) && options?.sizeLimit > 0) {
         const head: string = `data:${type};base64,`;
-        const fileSize: number = Math.round(atob(dataUri.substring(head.length)).length);
+        let fileSize: number = 0;
+        
+        if (dataUri) {
+          fileSize = Math.round(atob(dataUri.substring(head.length)).length);
+        } else if (blob) {
+          fileSize = blob.size;
+          blob = null;
+        } else {
+          throw new Error('Unable to determine file size.');
+        }
 
         if (this.debug) {
           console.warn('Image Optimization Factors:', options?.mode, quality, resizeFactor, `${fileSize} B`);
