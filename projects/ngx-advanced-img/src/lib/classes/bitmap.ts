@@ -1,6 +1,6 @@
 import * as exif from 'exifr';
 import mime from 'mime';
-import heic2any from '@kbrt38/heic2any';
+import heic2any from 'heic2any';
 import { Observable, Subject } from 'rxjs';
 
 import Timeout = NodeJS.Timeout;
