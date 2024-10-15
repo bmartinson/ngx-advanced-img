@@ -416,8 +416,9 @@ export class NgxAdvancedImgBitmap {
    *
    * @param anonymous Whether or not to load anonymously or not.
    * @param allowXMLLoading Drives whether XML serialization of image/svg+xml objects can be performed. By default, this feature is on, but some browsers do not support it.
+   * @param fullQualityLoad = If set to true, the image will be loaded with full encoding quality for any canvas output.
    */
-  public async load(anonymous = true, allowXMLLoading = true): Promise<NgxAdvancedImgBitmap> {
+  public async load(anonymous = true, allowXMLLoading = true, fullQualityLoad = false): Promise<NgxAdvancedImgBitmap> {
     // if no valid source, then reject the load
     if (!this.src) {
       return Promise.reject(new Error('No valid source provided'));
@@ -542,7 +543,7 @@ export class NgxAdvancedImgBitmap {
               ctx.drawImage(this.image, 0, 0);
 
               // if we haven't loaded anonymously, we'll taint the canvas and crash the application
-              let dataUri: string = (anonymous) ? canvas.toDataURL(this._mimeType, 1) : '';
+              let dataUri: string = (anonymous) ? canvas.toDataURL(this._mimeType, fullQualityLoad ? 1 : undefined) : '';
 
               if (typeof this.src === 'string') {
                 // store the exif data
