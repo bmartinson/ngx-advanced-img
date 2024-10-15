@@ -164,6 +164,8 @@ export class AppComponent {
                 performance.clearMarks();
                 performance.clearMeasures();
 
+                URL.revokeObjectURL(data.objectURL);
+
                 // clean up the bitmap
                 bitmap.destroy();
               }); // let the errors bubble up
