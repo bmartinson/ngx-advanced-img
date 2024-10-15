@@ -399,6 +399,16 @@ export class NgxAdvancedImgBitmap {
     this.size = 0;
     this._destroyed?.unsubscribe();
     this._destroyed = undefined;
+
+    const domURL: any = URL || webkitURL || window.URL;
+    
+    // clear any existing object urls as necessary
+    if (this._objectURL) {
+      try {
+        domURL.revokeObjectURL(this._objectURL);
+      } catch (error) {
+      }
+    }
   }
 
   /**
