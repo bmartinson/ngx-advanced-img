@@ -11,7 +11,7 @@ export class AppComponent {
   public imageFiles: File[] | null = null;
   public scale: number = 100;
   public quality: number = 1;
-  public size: number = 2097152;
+  public size: number = 500000; //2097152;
   public maxDimension: number = 16384;
   public strictMode: boolean = false;
   public retainMimeType: boolean = false;

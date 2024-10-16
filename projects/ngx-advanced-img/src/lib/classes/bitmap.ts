@@ -42,6 +42,7 @@ export interface INgxAdvancedImgOptimizationOptions {
 export class NgxAdvancedImgBitmap {
 
   private static ITERATION_FACTOR = 0.025;
+  private static SCALE_FACTOR = 1.8;
   private static QUALITY_FACTOR = .5;
   private static PREDICTION_FACTOR = .275; // how much we scale back our quality prediction since the mathematical function is not perfect
   private static SYSTEM_CANVAS: HTMLCanvasElement | undefined;
@@ -1129,7 +1130,24 @@ export class NgxAdvancedImgBitmap {
               }
 
               // we've reduced quality, let's reduce image size
-              resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
+              // resizeFactor = resizeFactor - NgxAdvancedImgBitmap.SCALE_FACTOR
+
+              if (options?.sizeLimit) {
+                const oldResizeFactor: number = resizeFactor;
+                const bytesToGo: number = fileSize - options?.sizeLimit;
+                const pixelReduction: number = bytesToGo / 750;
+
+                if (width > height) {
+                  resizeFactor = resizeFactor - (1 - ((width - pixelReduction) / width));
+                } else {
+                  resizeFactor = resizeFactor - (1 - ((height - pixelReduction) / height));
+                }
+
+                if (resizeFactor > oldResizeFactor) {
+                  resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
+                }
+              }
+
               if (resizeFactor < scaleFloor) {
                 if (options?.strict) {
                   throw new Error('The requested image optimization cannot be achieved');
@@ -1138,8 +1156,6 @@ export class NgxAdvancedImgBitmap {
                 // keep it within a given scaling factor
                 resizeFactor = scaleFloor;
               }
-
-              resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
 
               // clear any existing object urls as necessary
               if (objectURL) {
