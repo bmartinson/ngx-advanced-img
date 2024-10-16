@@ -903,13 +903,13 @@ export class NgxAdvancedImgBitmap {
         maxDimension > 0
       ) {
         if (canvas.width > maxDimension) {
-          height = canvas.height = canvas.height * resizeFactor;
+          height = canvas.height = canvas.height * (maxDimension / canvas.width);
           width = canvas.width = maxDimension;
           resizeFactor = maxDimension / this.image.width;
         }
 
         if (canvas.height > maxDimension) {
-          width = canvas.width = canvas.width * resizeFactor;
+          width = canvas.width = canvas.width * (maxDimension / canvas.height);
           height = canvas.height = maxDimension;
           resizeFactor = maxDimension / this.image.height;
         }
