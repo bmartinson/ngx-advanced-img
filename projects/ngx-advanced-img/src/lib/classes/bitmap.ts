@@ -1046,7 +1046,21 @@ export class NgxAdvancedImgBitmap {
               }
 
               if (resizeFactor > scaleFloor) {
-                resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
+                if (options?.sizeLimit) {
+                  const oldResizeFactor: number = resizeFactor;
+                  const bytesToGo: number = fileSize - options?.sizeLimit;
+                  const pixelReduction: number = bytesToGo / 750;
+
+                  if (width > height) {
+                    resizeFactor = resizeFactor - (1 - ((width - pixelReduction) / width));
+                  } else {
+                    resizeFactor = resizeFactor - (1 - ((height - pixelReduction) / height));
+                  }
+
+                  if (resizeFactor > oldResizeFactor) {
+                    resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
+                  }
+                }
 
                 if (resizeFactor < scaleFloor) {
                   // keep it within a given scaling factor
@@ -1130,8 +1144,6 @@ export class NgxAdvancedImgBitmap {
               }
 
               // we've reduced quality, let's reduce image size
-              // resizeFactor = resizeFactor - NgxAdvancedImgBitmap.SCALE_FACTOR
-
               if (options?.sizeLimit) {
                 const oldResizeFactor: number = resizeFactor;
                 const bytesToGo: number = fileSize - options?.sizeLimit;
