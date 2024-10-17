@@ -42,9 +42,9 @@ export interface INgxAdvancedImgOptimizationOptions {
 export class NgxAdvancedImgBitmap {
 
   private static ITERATION_FACTOR = 0.025;
-  private static SCALE_FACTOR = 1.8;
   private static QUALITY_FACTOR = .5;
   private static PREDICTION_FACTOR = .275; // how much we scale back our quality prediction since the mathematical function is not perfect
+  private static BYTES_PER_PIXEL = 942;
   private static SYSTEM_CANVAS: HTMLCanvasElement | undefined;
 
   public resolution: NgxAdvancedImgResolution;
@@ -1048,13 +1048,12 @@ export class NgxAdvancedImgBitmap {
               if (resizeFactor > scaleFloor) {
                 if (options?.sizeLimit) {
                   const oldResizeFactor: number = resizeFactor;
-                  const bytesToGo: number = fileSize - options?.sizeLimit;
-                  const pixelReduction: number = bytesToGo / 750;
+                  const newDims: { width: number, height: number } = this.estimateNewDimensions(fileSize, options?.sizeLimit, width, height);
 
                   if (width > height) {
-                    resizeFactor = resizeFactor - (1 - ((width - pixelReduction) / width));
+                    resizeFactor = resizeFactor - (1 - (newDims.width / width));
                   } else {
-                    resizeFactor = resizeFactor - (1 - ((height - pixelReduction) / height));
+                    resizeFactor = resizeFactor - (1 - (newDims.height / height));
                   }
 
                   if (resizeFactor > oldResizeFactor) {
@@ -1146,13 +1145,12 @@ export class NgxAdvancedImgBitmap {
               // we've reduced quality, let's reduce image size
               if (options?.sizeLimit) {
                 const oldResizeFactor: number = resizeFactor;
-                const bytesToGo: number = fileSize - options?.sizeLimit;
-                const pixelReduction: number = bytesToGo / 750;
+                const newDims: { width: number, height: number } = this.estimateNewDimensions(fileSize, options?.sizeLimit, width, height);
 
                 if (width > height) {
-                  resizeFactor = resizeFactor - (1 - ((width - pixelReduction) / width));
+                  resizeFactor = resizeFactor - (1 - (newDims.width / width));
                 } else {
-                  resizeFactor = resizeFactor - (1 - ((height - pixelReduction) / height));
+                  resizeFactor = resizeFactor - (1 - (newDims.height / height));
                 }
 
                 if (resizeFactor > oldResizeFactor) {
@@ -1194,6 +1192,42 @@ export class NgxAdvancedImgBitmap {
         exifData,
       } as INgxAdvancedImgBitmapOptimization);
     });
+  }
+
+  /**
+   * Estimates the new dimensions to use for scaling determinations.
+   *
+   * @param fileSize The current file size of the calculated reduced image.
+   * @param targetSize The target file size to reduce the image to.
+   * @param width The current width of the file.
+   * @param height The current height of the file.
+   */
+  private estimateNewDimensions(fileSize: number, targetSize: number, width: number, height: number): { width: number, height: number } {
+    const bytesToGo: number = fileSize - targetSize;
+    const bytesPerPixel: number = fileSize / (width * height);
+    const pixelReduction: number = bytesToGo / bytesPerPixel;
+    let newWidth: number = width;
+    let newHeight: number = height;
+    let foundReduction = false;
+
+    while (!foundReduction) {
+      if (width > height) {
+        newHeight = newHeight * ((newWidth - 1) / newWidth);
+        newWidth--;
+      } else {
+        newWidth = newWidth * ((newHeight - 1) / newHeight);
+        newHeight--;
+      }
+
+      if ((width * height) - (newWidth * newHeight) >= pixelReduction) {
+        foundReduction = true;
+      }
+    }
+
+    return {
+      width: newWidth,
+      height: newHeight,
+    };
   }
 
   /**
