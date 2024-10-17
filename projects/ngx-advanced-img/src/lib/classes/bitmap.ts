@@ -44,7 +44,6 @@ export class NgxAdvancedImgBitmap {
   private static ITERATION_FACTOR = 0.025;
   private static QUALITY_FACTOR = .5;
   private static PREDICTION_FACTOR = .275; // how much we scale back our quality prediction since the mathematical function is not perfect
-  private static BYTES_PER_PIXEL = 942;
   private static SYSTEM_CANVAS: HTMLCanvasElement | undefined;
 
   public resolution: NgxAdvancedImgResolution;
