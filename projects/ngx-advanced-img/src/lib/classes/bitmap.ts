@@ -1210,7 +1210,7 @@ export class NgxAdvancedImgBitmap {
     let foundReduction = false;
 
     while (!foundReduction) {
-      if (width > height) {
+      if (width < height) {
         newHeight = newHeight * ((newWidth - 1) / newWidth);
         newWidth--;
       } else {
