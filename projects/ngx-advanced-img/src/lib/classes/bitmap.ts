@@ -401,11 +401,11 @@ export class NgxAdvancedImgBitmap {
     this._destroyed = undefined;
 
     const domURL: any = URL || webkitURL || window.URL;
-    
+
     // clear any existing object urls as necessary
     if (this._objectURL) {
       try {
-        domURL.revokeObjectURL(this._objectURL);
+        domURL?.revokeObjectURL(this._objectURL);
       } catch (error) {
       }
     }
@@ -416,8 +416,9 @@ export class NgxAdvancedImgBitmap {
    *
    * @param anonymous Whether or not to load anonymously or not.
    * @param allowXMLLoading Drives whether XML serialization of image/svg+xml objects can be performed. By default, this feature is on, but some browsers do not support it.
+   * @param fullQualityLoad = If set to true, the image will be loaded with full encoding quality for any canvas output.
    */
-  public async load(anonymous = true, allowXMLLoading = true): Promise<NgxAdvancedImgBitmap> {
+  public async load(anonymous = true, allowXMLLoading = true, fullQualityLoad = false): Promise<NgxAdvancedImgBitmap> {
     // if no valid source, then reject the load
     if (!this.src) {
       return Promise.reject(new Error('No valid source provided'));
@@ -542,7 +543,7 @@ export class NgxAdvancedImgBitmap {
               ctx.drawImage(this.image, 0, 0);
 
               // if we haven't loaded anonymously, we'll taint the canvas and crash the application
-              let dataUri: string = (anonymous) ? canvas.toDataURL(this._mimeType) : '';
+              let dataUri: string = (anonymous) ? canvas.toDataURL(this._mimeType, fullQualityLoad ? 1 : undefined) : '';
 
               if (typeof this.src === 'string') {
                 // store the exif data
@@ -917,13 +918,13 @@ export class NgxAdvancedImgBitmap {
         maxDimension > 0
       ) {
         if (canvas.width > maxDimension) {
-          height = canvas.height = canvas.height * resizeFactor;
+          height = canvas.height = canvas.height * (maxDimension / canvas.width);
           width = canvas.width = maxDimension;
           resizeFactor = maxDimension / this.image.width;
         }
 
         if (canvas.height > maxDimension) {
-          width = canvas.width = canvas.width * resizeFactor;
+          width = canvas.width = canvas.width * (maxDimension / canvas.height);
           height = canvas.height = maxDimension;
           resizeFactor = maxDimension / this.image.height;
         }
@@ -1074,7 +1075,20 @@ export class NgxAdvancedImgBitmap {
               }
 
               if (resizeFactor > scaleFloor) {
-                resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
+                if (options?.sizeLimit) {
+                  const oldResizeFactor: number = resizeFactor;
+                  const newDims: { width: number, height: number } = this.estimateNewDimensions(fileSize, options?.sizeLimit, width, height);
+
+                  if (width > height) {
+                    resizeFactor = resizeFactor - (1 - (newDims.width / width));
+                  } else {
+                    resizeFactor = resizeFactor - (1 - (newDims.height / height));
+                  }
+
+                  if (resizeFactor > oldResizeFactor) {
+                    resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
+                  }
+                }
 
                 if (resizeFactor < scaleFloor) {
                   // keep it within a given scaling factor
@@ -1158,7 +1172,21 @@ export class NgxAdvancedImgBitmap {
               }
 
               // we've reduced quality, let's reduce image size
-              resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
+              if (options?.sizeLimit) {
+                const oldResizeFactor: number = resizeFactor;
+                const newDims: { width: number, height: number } = this.estimateNewDimensions(fileSize, options?.sizeLimit, width, height);
+
+                if (width > height) {
+                  resizeFactor = resizeFactor - (1 - (newDims.width / width));
+                } else {
+                  resizeFactor = resizeFactor - (1 - (newDims.height / height));
+                }
+
+                if (resizeFactor > oldResizeFactor) {
+                  resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
+                }
+              }
+
               if (resizeFactor < scaleFloor) {
                 if (options?.strict) {
                   throw new Error('The requested image optimization cannot be achieved');
@@ -1167,8 +1195,6 @@ export class NgxAdvancedImgBitmap {
                 // keep it within a given scaling factor
                 resizeFactor = scaleFloor;
               }
-
-              resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
 
               // clear any existing object urls as necessary
               if (objectURL) {
@@ -1195,6 +1221,42 @@ export class NgxAdvancedImgBitmap {
         exifData,
       } as INgxAdvancedImgBitmapOptimization);
     });
+  }
+
+  /**
+   * Estimates the new dimensions to use for scaling determinations.
+   *
+   * @param fileSize The current file size of the calculated reduced image.
+   * @param targetSize The target file size to reduce the image to.
+   * @param width The current width of the file.
+   * @param height The current height of the file.
+   */
+  private estimateNewDimensions(fileSize: number, targetSize: number, width: number, height: number): { width: number, height: number } {
+    const bytesToGo: number = fileSize - targetSize;
+    const bytesPerPixel: number = fileSize / (width * height);
+    const pixelReduction: number = bytesToGo / bytesPerPixel;
+    let newWidth: number = width;
+    let newHeight: number = height;
+    let foundReduction = false;
+
+    while (!foundReduction) {
+      if (width < height) {
+        newHeight = newHeight * ((newWidth - 1) / newWidth);
+        newWidth--;
+      } else {
+        newWidth = newWidth * ((newHeight - 1) / newHeight);
+        newHeight--;
+      }
+
+      if ((width * height) - (newWidth * newHeight) >= pixelReduction) {
+        foundReduction = true;
+      }
+    }
+
+    return {
+      width: newWidth,
+      height: newHeight,
+    };
   }
 
   /**
