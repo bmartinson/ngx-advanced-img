@@ -1,5 +1,10 @@
 {
   "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "cli": {
+    "schematicCollections": [
+      "@angular-eslint/schematics"
+    ]
+  },
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
@@ -84,6 +89,15 @@
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
             "buildTarget": "ngx-advanced-img-sample:build"
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "src/**/*.ts",
+              "src/**/*.html"
+            ]
           }
         },
         "test": {
