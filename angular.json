@@ -104,15 +104,6 @@
             ],
             "scripts": []
           }
-        },
-        "lint": {
-          "builder": "@angular-eslint/builder:lint",
-          "options": {
-            "lintFilePatterns": [
-              "projects/ngx-advanced-img/**/*.ts",
-              "projects/ngx-advanced-img/**/*.html"
-            ]
-          }
         }
       }
     },
@@ -148,14 +139,6 @@
           }
         }
       }
-    }
-  },
-  "schematics": {
-    "@angular-eslint/schematics:application": {
-      "setParserOptionsProject": true
-    },
-    "@angular-eslint/schematics:library": {
-      "setParserOptionsProject": true
     }
   }
 }
