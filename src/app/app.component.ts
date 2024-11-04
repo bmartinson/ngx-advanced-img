@@ -9,16 +9,13 @@ import { INgxAdvancedImgBitmapOptimization, INgxAdvancedImgBitmapInfo, NgxAdvanc
 export class AppComponent {
 
   public imageFiles: File[] | null = null;
-  public scale: number = 100;
-  public quality: number = 1;
-  public size: number = 500000; //2097152;
-  public maxDimension: number = 16384;
-  public strictMode: boolean = false;
-  public retainMimeType: boolean = false;
+  public scale = 100;
+  public quality = 1;
+  public size = 500000; //2097152;
+  public maxDimension = 16384;
+  public strictMode = false;
+  public retainMimeType = false;
   public mode: 'retain-size' | 'retain-quality' | 'prefer-size' | 'prefer-quality' | 'alternating-preference' = 'prefer-size';
-
-  public constructor() {
-  }
 
   private static getFileNameWithoutExtension(file: File): string {
     const fileName = file.name;
@@ -27,39 +24,40 @@ export class AppComponent {
     return fileName.substring(0, lastDotIndex);
   }
 
-  public onFileChange(event: any): void {
-    this.imageFiles = Array.from(event.target?.files);
+  public onFileChange(event: Event): void {
+    const files = (event.target as HTMLInputElement)?.files;
+    this.imageFiles = files ? Array.from(files) : null;
   }
 
-  public onScaleChange(event: any): void {
-    this.scale = +event.target.value;
+  public onScaleChange(event: Event): void {
+    this.scale = +(event?.target as HTMLInputElement)?.value;
   }
 
-  public onQualityChange(event: any): void {
-    this.quality = +event.target.value;
+  public onQualityChange(event: Event): void {
+    this.quality = +(event?.target as HTMLInputElement)?.value;
   }
 
-  public onSizeChange(event: any): void {
-    this.size = +event.target.value;
+  public onSizeChange(event: Event): void {
+    this.size = +(event?.target as HTMLInputElement)?.value;
   }
 
-  public onMaxDimensionChange(event: any): void {
-    this.maxDimension = +event.target.value;
+  public onMaxDimensionChange(event: Event): void {
+    this.maxDimension = +(event?.target as HTMLInputElement)?.value;
   }
 
-  public onRetainMimeTypeChange(event: any): void {
-    this.retainMimeType = !!event.target.checked;
+  public onRetainMimeTypeChange(event: Event): void {
+    this.retainMimeType = !!(event?.target as HTMLInputElement)?.checked;
   }
 
-  public onStrictModeChange(event: any): void {
-    this.strictMode = !!event.target.checked;
+  public onStrictModeChange(event: Event): void {
+    this.strictMode = !!(event?.target as HTMLInputElement)?.checked;
   }
 
-  public onModeChange(event: any): void {
-    this.mode = event.target.value;
+  public onModeChange(event: Event): void {
+    this.mode = (event?.target as HTMLInputElement)?.value as 'retain-size' | 'retain-quality' | 'prefer-size' | 'prefer-quality' | 'alternating-preference';
   }
 
-  public prettyLog(message: any[], level?: 'log' | 'warn' | 'error' | undefined): void {
+  public prettyLog(message: (string | number | boolean | Event)[], level?: 'log' | 'warn' | 'error' | undefined): void {
     if (!level) {
       level = 'log';
     }
@@ -122,7 +120,7 @@ export class AppComponent {
               // compress the image to a smaller file size
               this.prettyLog([`Optimizing ${file.name}...`]);
               this.prettyLog([
-                'Quality:', this.quality,
+                'Quality:', String(),
                 'Type:', mimeType,
                 'Initial Size (B):', bitmap.initialFileSize,
                 'Loaded File Size (B):', bitmap.fileSize,
