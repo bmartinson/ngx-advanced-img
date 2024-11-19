@@ -1,7 +1,8 @@
 import { Directive, ElementRef, Input, OnDestroy, OnInit, Renderer2 } from '@angular/core';
 
 @Directive({
-  selector: '[ngxAdvancedImgFallback]',
+    selector: '[ngxAdvancedImgFallback]',
+    standalone: false
 })
 export class NgxAdvancedImgFallbackDirective implements OnInit, OnDestroy {
 

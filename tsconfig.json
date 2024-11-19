@@ -14,7 +14,6 @@
     "esModuleInterop": true,
     "sourceMap": true,
     "declaration": false,
-    "downlevelIteration": true,
     "paths": {
       "ngx-advanced-img": [
         "dist/ngx-advanced-img/ngx-advanced-img",
