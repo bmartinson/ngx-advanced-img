@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable guard-for-in */
-import { DOMImplementation, DOMParser, XMLSerializer } from '@xmldom/xmldom';
+import { DOMImplementation, DOMParser, XMLSerializer, DocumentType } from '@xmldom/xmldom';
 import { NgxAdvancedImgEmptyTree } from './empty-tree';
 
 interface IXMLObj extends XMLDocument {
@@ -50,12 +50,13 @@ export class NgxAdvancedImgJxon {
   }
 
   // unbuild
-  public jsToXml(oObjTree: any, sNamespaceURI?: string, sQualifiedName?: string, oDocumentType?: DocumentType) {
+  public jsToXml(oObjTree: any, sNamespaceURI?: string, sQualifiedName?: string, oDocumentType?: DocumentType | null | undefined): XMLDocument {
     const documentImplementation: DOMImplementation = new DOMImplementation();
-    const oNewDoc: XMLDocument = documentImplementation.createDocument(
-      sNamespaceURI || null, sQualifiedName || '',
-      oDocumentType || null,
-    );
+    const oNewDoc = documentImplementation.createDocument(
+      sNamespaceURI || null,
+      sQualifiedName || '',
+      oDocumentType as DocumentType | null | undefined,
+    ) as unknown as XMLDocument;
     this.loadObjTree(oNewDoc, oNewDoc.documentElement || oNewDoc, oObjTree);
     return oNewDoc;
   }
@@ -65,14 +66,22 @@ export class NgxAdvancedImgJxon {
       this.parser = new DOMParser();
     }
 
-    return this.parser.parseFromString(xmlStr, 'application/xml');
+    return this.parser.parseFromString(xmlStr, 'application/xml') as unknown as Document;
   }
 
   public xmlToString(xmlObj: IXMLObj): string {
     if (typeof xmlObj.xml !== 'undefined') {
       return xmlObj.xml;
     } else {
-      return (new XMLSerializer()).serializeToString(xmlObj);
+      try {
+        return (new XMLSerializer()).serializeToString(xmlObj as any);
+      } catch (e) {
+        try {
+          return xmlObj.toString();
+        } catch (e2) {
+          throw new Error('Unable to serialize XML object');
+        }
+      }
     }
   }
 
