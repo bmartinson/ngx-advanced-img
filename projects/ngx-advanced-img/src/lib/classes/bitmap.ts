@@ -426,20 +426,14 @@ export class NgxAdvancedImgBitmap {
 
     // HEICs need to be converted before loading
     let needsHEICConversion = false;
+    let heicConversionAttempted = false;
     if (typeof this.src === 'string') {
       if (this.src.startsWith('data:image/heic')) {
         needsHEICConversion = true;
         // convert to blob
-        this.src = NgxAdvancedImgBitmap.dataURItoBlob(this.src);
       }
     } else if (this.src.type === 'image/heic') {
       needsHEICConversion = true;
-    }
-
-    if (needsHEICConversion) {
-      const jpeg = await NgxAdvancedImgBitmap.convertHEIC(this.src as Blob, 'image/jpeg');
-
-      this.src = jpeg;
     }
 
     // if we have an expiration clock ticking, clear it
@@ -458,16 +452,48 @@ export class NgxAdvancedImgBitmap {
       }
 
       // image loading error handler
-      const onerror: () => void = () => {
-        this.loaded = false;
-        this.size = 0;
+      const onerror: () => Promise<void> = async () => {
+        if (!heicConversionAttempted && needsHEICConversion) {
+          try {
+            heicConversionAttempted = true; // Ensure we only attempt conversion once
+            const jpeg = await NgxAdvancedImgBitmap.convertHEIC(this.src as Blob, 'image/jpeg');
+            this.src = jpeg; // Update the source with the converted JPEG
 
-        // ensure that no expiration clock is running if we failed
-        if (this.expirationClock) {
-          clearTimeout(this.expirationClock);
+            if (this.image) {
+              this.image.src = URL.createObjectURL(this.src);
+
+              // store the original blob file size
+              this._initialFileSize = this.src.size;
+  
+              // parse the exif data direction while the image content loads
+              exif.parse(this.src, true).then((exifData: any) => {
+                this._exifData = exifData;
+              });
+            }
+          } catch (conversionError) {
+            console.error('HEIC conversion failed:', conversionError);
+
+            this.loaded = false;
+            this.size = 0;
+      
+            // Ensure that no expiration clock is running if we failed
+            if (this.expirationClock) {
+              clearTimeout(this.expirationClock);
+            }
+
+            reject(this);
+          }
+        } else {
+          this.loaded = false;
+          this.size = 0;
+    
+          // Ensure that no expiration clock is running if we failed
+          if (this.expirationClock) {
+            clearTimeout(this.expirationClock);
+          }
+    
+          reject(this);
         }
-
-        reject(this);
       };
 
       // image load success handler
