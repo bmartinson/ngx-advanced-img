@@ -426,20 +426,14 @@ export class NgxAdvancedImgBitmap {
 
     // HEICs need to be converted before loading
     let needsHEICConversion = false;
+    let heicConversionAttempted = false;
     if (typeof this.src === 'string') {
       if (this.src.startsWith('data:image/heic')) {
         needsHEICConversion = true;
         // convert to blob
-        this.src = NgxAdvancedImgBitmap.dataURItoBlob(this.src);
       }
     } else if (this.src.type === 'image/heic') {
       needsHEICConversion = true;
-    }
-
-    if (needsHEICConversion) {
-      const jpeg = await NgxAdvancedImgBitmap.convertHEIC(this.src as Blob, 'image/jpeg');
-
-      this.src = jpeg;
     }
 
     // if we have an expiration clock ticking, clear it
@@ -458,16 +452,48 @@ export class NgxAdvancedImgBitmap {
       }
 
       // image loading error handler
-      const onerror: () => void = () => {
-        this.loaded = false;
-        this.size = 0;
+      const onerror: () => Promise<void> = async () => {
+        if (!heicConversionAttempted && needsHEICConversion) {
+          try {
+            heicConversionAttempted = true; // Ensure we only attempt conversion once
+            const jpeg = await NgxAdvancedImgBitmap.convertHEIC(this.src as Blob, 'image/jpeg');
+            this.src = jpeg; // Update the source with the converted JPEG
 
-        // ensure that no expiration clock is running if we failed
-        if (this.expirationClock) {
-          clearTimeout(this.expirationClock);
+            if (this.image) {
+              this.image.src = URL.createObjectURL(this.src);
+
+              // store the original blob file size
+              this._initialFileSize = this.src.size;
+  
+              // parse the exif data direction while the image content loads
+              exif.parse(this.src, true).then((exifData: any) => {
+                this._exifData = exifData;
+              });
+            }
+          } catch (conversionError) {
+            console.error('HEIC conversion failed:', conversionError);
+
+            this.loaded = false;
+            this.size = 0;
+      
+            // Ensure that no expiration clock is running if we failed
+            if (this.expirationClock) {
+              clearTimeout(this.expirationClock);
+            }
+
+            reject(this);
+          }
+        } else {
+          this.loaded = false;
+          this.size = 0;
+    
+          // Ensure that no expiration clock is running if we failed
+          if (this.expirationClock) {
+            clearTimeout(this.expirationClock);
+          }
+    
+          reject(this);
         }
-
-        reject(this);
       };
 
       // image load success handler
@@ -833,7 +859,7 @@ export class NgxAdvancedImgBitmap {
     lastOp?: 'quality' | 'scale' | undefined,
     lastSize?: number,
   ): Promise<INgxAdvancedImgBitmapOptimization> {
-    return new Promise(async (resolve: (value: INgxAdvancedImgBitmapOptimization) => void) => {
+    return new Promise((resolve: (value: INgxAdvancedImgBitmapOptimization) => void) => {
       if (
         !this.image ||
         !this.loaded
@@ -846,26 +872,10 @@ export class NgxAdvancedImgBitmap {
       }
 
       // draw the image to the canvas
-      let width: number = this.image.width * resizeFactor;
-      let height: number = this.image.height * resizeFactor;
+      let canvas: HTMLCanvasElement | null = document.createElement('canvas');
+      let width: number = canvas.width = this.image.width * resizeFactor;
+      let height: number = canvas.height = this.image.height * resizeFactor;
       let minThresholdReached = false;
-
-      // Check for OffscreenCanvas support
-      let canvas: HTMLCanvasElement | OffscreenCanvas | null;
-      let ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null; // Declare ctx outside
-
-      if ('OffscreenCanvas' in window) {
-        // Use OffscreenCanvas if supported
-        canvas = new OffscreenCanvas(width, height);
-        ctx = canvas.getContext('2d', { desynchronized: false, willReadFrequently: true });
-        console.log('Using OffscreenCanvas');
-      } else {
-        // Fallback to normal canvas
-        canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        ctx = canvas.getContext('2d', { desynchronized: false, willReadFrequently: true });
-      }
 
       // cap the size of the canvas in accordance with te minDimension constraints for optimization
       if (
@@ -930,6 +940,8 @@ export class NgxAdvancedImgBitmap {
         }
       }
 
+      const ctx: CanvasRenderingContext2D | null = canvas?.getContext('2d', { desynchronized: false, willReadFrequently: true });
+
       ctx?.drawImage(
         this.image,
         0,
@@ -938,24 +950,8 @@ export class NgxAdvancedImgBitmap {
         canvas.height,
       );
 
-      const domURL: any = URL || webkitURL || window.URL;
-      let objectURL = '';
-      let dataUri: string | null = null;
-      let blob: Blob | null = null;
-      
-      if (canvas instanceof HTMLCanvasElement) {
-        // if we haven't loaded anonymously, we'll taint the canvas and crash the application
-        dataUri = canvas.toDataURL(type, quality);
-
-        // if we got the bitmap data, create the link to download and invoke it
-        if (dataUri) {
-          // get the bitmap data
-          objectURL = domURL.createObjectURL(NgxAdvancedImgBitmap.dataURItoBlob(dataUri));
-        }
-      } else if (canvas instanceof OffscreenCanvas) {
-        blob = await canvas.convertToBlob({ type, quality });
-        objectURL = domURL.createObjectURL(blob);
-      }
+      // if we haven't loaded anonymously, we'll taint the canvas and crash the application
+      let dataUri: string = canvas.toDataURL(type, quality);
 
       // clean up the canvas
       if (canvas) {
@@ -964,22 +960,22 @@ export class NgxAdvancedImgBitmap {
         canvas = null;
       }
 
+      const domURL: any = URL || webkitURL || window.URL;
+      let objectURL = '';
+
+      // if we got the bitmap data, create the link to download and invoke it
+      if (dataUri) {
+        // get the bitmap data
+        objectURL = domURL.createObjectURL(NgxAdvancedImgBitmap.dataURItoBlob(dataUri));
+      }
+
       if (!objectURL) {
         throw new Error('An error occurred while drawing to the canvas');
       }
 
       if (typeof options?.sizeLimit === 'number' && !isNaN(options?.sizeLimit) && isFinite(options?.sizeLimit) && options?.sizeLimit > 0) {
         const head: string = `data:${type};base64,`;
-        let fileSize: number = 0;
-        
-        if (dataUri) {
-          fileSize = Math.round(atob(dataUri.substring(head.length)).length);
-        } else if (blob) {
-          fileSize = blob.size;
-          blob = null;
-        } else {
-          throw new Error('Unable to determine file size.');
-        }
+        const fileSize: number = Math.round(atob(dataUri.substring(head.length)).length);
 
         if (this.debug) {
           console.warn('Image Optimization Factors:', options?.mode, quality, resizeFactor, `${fileSize} B`);
