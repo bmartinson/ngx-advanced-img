@@ -375,14 +375,10 @@ export class NgxAdvancedImgBitmap {
     });
   }
 
-  private static canvasToBlobPromise(canvas: HTMLCanvasElement, mimeType = 'image/png', quality = 1.0) {
+  private static canvasToBlobPromise(canvas: HTMLCanvasElement, mimeType = 'image/png', quality = 1.0): Promise<Blob | null> {
     return new Promise((resolve, reject) => {
       canvas.toBlob((blob) => {
-        if (blob) {
-          resolve(blob); // Resolve the Promise with the blob
-        } else {
-          reject(new Error('Failed to convert canvas to Blob.'));
-        }
+        resolve(blob);
       }, mimeType, quality);
     });
   }
@@ -938,8 +934,8 @@ export class NgxAdvancedImgBitmap {
       );
 
       // if we haven't loaded anonymously, we'll taint the canvas and crash the application
-      let dataUri: string = canvas.toDataURL(type, quality);
-      //let c = await NgxAdvancedImgBitmap.canvasToBlobPromise(canvas, type, quality);
+      //let dataUri: string = canvas.toDataURL(type, quality);
+      let dataBlob = await NgxAdvancedImgBitmap.canvasToBlobPromise(canvas, type, quality);
 
       // clean up the canvas
       if (canvas) {
@@ -952,18 +948,17 @@ export class NgxAdvancedImgBitmap {
       let objectURL = '';
 
       // if we got the bitmap data, create the link to download and invoke it
-      if (dataUri) {
+      if (dataBlob) {
         // get the bitmap data
-        objectURL = domURL.createObjectURL(NgxAdvancedImgBitmap.dataURItoBlob(dataUri));
+        objectURL = domURL.createObjectURL(dataBlob);
       }
 
-      if (!objectURL) {
+      if (!objectURL || !dataBlob) {
         throw new Error('An error occurred while drawing to the canvas');
       }
 
       if (typeof options?.sizeLimit === 'number' && !isNaN(options?.sizeLimit) && isFinite(options?.sizeLimit) && options?.sizeLimit > 0) {
-        const head: string = `data:${type};base64,`;
-        const fileSize: number = Math.round(atob(dataUri.substring(head.length)).length);
+        const fileSize: number = Math.round(dataBlob.size);
 
         // if (this.debug) {
         //   console.warn('Image Optimization Factors:', options?.mode, quality, resizeFactor, `${fileSize} B`);
