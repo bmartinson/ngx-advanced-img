@@ -375,6 +375,19 @@ export class NgxAdvancedImgBitmap {
     });
   }
 
+  private static canvasToBlobPromise(canvas: HTMLCanvasElement, mimeType = 'image/png', quality = 1.0) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob); // Resolve the Promise with the blob
+        } else {
+          reject(new Error('Failed to convert canvas to Blob.'));
+        }
+      }, mimeType, quality);
+    });
+  }
+  
+
   /**
    * Destroys the current asset bitmap object and frees all memory in use.
    */
@@ -426,14 +439,20 @@ export class NgxAdvancedImgBitmap {
 
     // HEICs need to be converted before loading
     let needsHEICConversion = false;
-    let heicConversionAttempted = false;
     if (typeof this.src === 'string') {
       if (this.src.startsWith('data:image/heic')) {
         needsHEICConversion = true;
         // convert to blob
+        this.src = NgxAdvancedImgBitmap.dataURItoBlob(this.src);
       }
     } else if (this.src.type === 'image/heic') {
       needsHEICConversion = true;
+    }
+
+    if (needsHEICConversion) {
+      const jpeg = await NgxAdvancedImgBitmap.convertHEIC(this.src as Blob, 'image/jpeg');
+
+      this.src = jpeg;
     }
 
     // if we have an expiration clock ticking, clear it
@@ -453,47 +472,15 @@ export class NgxAdvancedImgBitmap {
 
       // image loading error handler
       const onerror: () => Promise<void> = async () => {
-        if (!heicConversionAttempted && needsHEICConversion) {
-          try {
-            heicConversionAttempted = true; // Ensure we only attempt conversion once
-            const jpeg = await NgxAdvancedImgBitmap.convertHEIC(this.src as Blob, 'image/jpeg');
-            this.src = jpeg; // Update the source with the converted JPEG
+        this.loaded = false;
+        this.size = 0;
 
-            if (this.image) {
-              this.image.src = URL.createObjectURL(this.src);
-
-              // store the original blob file size
-              this._initialFileSize = this.src.size;
-  
-              // parse the exif data direction while the image content loads
-              exif.parse(this.src, true).then((exifData: any) => {
-                this._exifData = exifData;
-              });
-            }
-          } catch (conversionError) {
-            console.error('HEIC conversion failed:', conversionError);
-
-            this.loaded = false;
-            this.size = 0;
-      
-            // Ensure that no expiration clock is running if we failed
-            if (this.expirationClock) {
-              clearTimeout(this.expirationClock);
-            }
-
-            reject(this);
-          }
-        } else {
-          this.loaded = false;
-          this.size = 0;
-    
-          // Ensure that no expiration clock is running if we failed
-          if (this.expirationClock) {
-            clearTimeout(this.expirationClock);
-          }
-    
-          reject(this);
+        // ensure that no expiration clock is running if we failed
+        if (this.expirationClock) {
+          clearTimeout(this.expirationClock);
         }
+
+        reject(this);
       };
 
       // image load success handler
@@ -859,7 +846,7 @@ export class NgxAdvancedImgBitmap {
     lastOp?: 'quality' | 'scale' | undefined,
     lastSize?: number,
   ): Promise<INgxAdvancedImgBitmapOptimization> {
-    return new Promise((resolve: (value: INgxAdvancedImgBitmapOptimization) => void) => {
+    return new Promise(async (resolve: (value: INgxAdvancedImgBitmapOptimization) => void) => {
       if (
         !this.image ||
         !this.loaded
@@ -952,6 +939,7 @@ export class NgxAdvancedImgBitmap {
 
       // if we haven't loaded anonymously, we'll taint the canvas and crash the application
       let dataUri: string = canvas.toDataURL(type, quality);
+      //let c = await NgxAdvancedImgBitmap.canvasToBlobPromise(canvas, type, quality);
 
       // clean up the canvas
       if (canvas) {
@@ -977,9 +965,9 @@ export class NgxAdvancedImgBitmap {
         const head: string = `data:${type};base64,`;
         const fileSize: number = Math.round(atob(dataUri.substring(head.length)).length);
 
-        if (this.debug) {
-          console.warn('Image Optimization Factors:', options?.mode, quality, resizeFactor, `${fileSize} B`);
-        }
+        // if (this.debug) {
+        //   console.warn('Image Optimization Factors:', options?.mode, quality, resizeFactor, `${fileSize} B`);
+        // }
 
         if (
           fileSize > options?.sizeLimit &&
