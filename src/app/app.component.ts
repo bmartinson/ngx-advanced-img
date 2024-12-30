@@ -145,10 +145,10 @@ export class AppComponent {
                 performance.measure('Image Optimization', 'optimization_start', 'optimization_end');
 
                 // auto save this for the user
-                this.prettyLog(['[TEST] Saving URL:', data.objectURL, data.exifData, unOptimizedData.exifData]);
+                this.prettyLog(['[TEST] Saving URL:', data.blob, data.exifData, unOptimizedData.exifData]);
 
                 performance.mark('save_start');
-                bitmap.saveFile(`test_output_${AppComponent.getFileNameWithoutExtension(file)} _q - ${this.quality} _m - ${this.mode} _s - ${this.size} `, data.objectURL, mimeType);
+                bitmap.saveFile(`test_output_${AppComponent.getFileNameWithoutExtension(file)} _q - ${this.quality} _m - ${this.mode} _s - ${this.size} `, data.blob, mimeType);
                 performance.mark('save_end');
                 performance.measure('Image Saving', 'save_start', 'save_end');
 
@@ -163,8 +163,6 @@ export class AppComponent {
                 // reset performance
                 performance.clearMarks();
                 performance.clearMeasures();
-
-                URL.revokeObjectURL(data.objectURL);
 
                 // clean up the bitmap
                 bitmap.destroy();

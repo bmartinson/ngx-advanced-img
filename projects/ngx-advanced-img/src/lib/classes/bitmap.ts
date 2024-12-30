@@ -21,7 +21,7 @@ export interface INgxAdvancedImgBitmapDataSignature {
 }
 
 export interface INgxAdvancedImgBitmapOptimization {
-  objectURL: any;
+  blob: Blob;
   exifData: any;
 }
 
@@ -749,7 +749,7 @@ export class NgxAdvancedImgBitmap {
    * @param fileName The name of the file to save.
    * @param objectURL The object URL to use for the download, if not provided, the original image url will be used.
    */
-  public saveFile(fileName: string, objectURL?: string, mimeType?: string): void {
+  public saveFile(fileName: string, blob?: Blob, mimeType?: string): void {
     if (!this.loaded || !this.image) {
       return;
     }
@@ -768,10 +768,11 @@ export class NgxAdvancedImgBitmap {
     const extension: string | null = mime.getExtension(mimeType);
     let url: string = this.image.src;
 
-    // use the object url if one is present
-    if (objectURL) {
-      url = objectURL;
+    // If a Blob is provided, create an object URL for it
+    if (blob) {
+      url = domURL.createObjectURL(blob);
     } else if (this.objectURL) {
+      // Otherwise, use the existing object URL if one is present
       url = this.objectURL;
     }
 
@@ -935,7 +936,7 @@ export class NgxAdvancedImgBitmap {
 
       // if we haven't loaded anonymously, we'll taint the canvas and crash the application
       //let dataUri: string = canvas.toDataURL(type, quality);
-      let dataBlob = await NgxAdvancedImgBitmap.canvasToBlobPromise(canvas, type, quality);
+      let blob = await NgxAdvancedImgBitmap.canvasToBlobPromise(canvas, type, quality);
 
       // clean up the canvas
       if (canvas) {
@@ -945,20 +946,14 @@ export class NgxAdvancedImgBitmap {
       }
 
       const domURL: any = URL || webkitURL || window.URL;
-      let objectURL = '';
 
-      // if we got the bitmap data, create the link to download and invoke it
-      if (dataBlob) {
-        // get the bitmap data
-        objectURL = domURL.createObjectURL(dataBlob);
-      }
 
-      if (!objectURL || !dataBlob) {
+      if (!blob) {
         throw new Error('An error occurred while drawing to the canvas');
       }
 
       if (typeof options?.sizeLimit === 'number' && !isNaN(options?.sizeLimit) && isFinite(options?.sizeLimit) && options?.sizeLimit > 0) {
-        const fileSize: number = Math.round(dataBlob.size);
+        const fileSize: number = Math.round(blob.size);
 
         // if (this.debug) {
         //   console.warn('Image Optimization Factors:', options?.mode, quality, resizeFactor, `${fileSize} B`);
@@ -1046,7 +1041,7 @@ export class NgxAdvancedImgBitmap {
                 exifData['ExifImageHeight'] = height;
 
                 resolve({
-                  objectURL,
+                  blob,
                   exifData,
                 } as INgxAdvancedImgBitmapOptimization);
 
@@ -1074,14 +1069,6 @@ export class NgxAdvancedImgBitmap {
                   resizeFactor = scaleFloor;
                 }
 
-                // clear any existing object urls as necessary
-                if (objectURL) {
-                  try {
-                    domURL.revokeObjectURL(objectURL);
-                  } catch (error) {
-                  }
-                }
-
                 // if the quality is too high, reduce it and try again
                 this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp, fileSize).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
 
@@ -1100,14 +1087,6 @@ export class NgxAdvancedImgBitmap {
 
               quality = quality - (((options?.sizeLimit ? (fileSize / options?.sizeLimit) * NgxAdvancedImgBitmap.PREDICTION_FACTOR : NgxAdvancedImgBitmap.QUALITY_FACTOR) / (options?.sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR));
 
-              // clear any existing object urls as necessary
-              if (objectURL) {
-                try {
-                  domURL.revokeObjectURL(objectURL);
-                } catch (error) {
-                }
-              }
-
               this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp, fileSize).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
 
               return;
@@ -1120,11 +1099,6 @@ export class NgxAdvancedImgBitmap {
                 exifData['ExifImageWidth'] = width;
                 exifData['ExifImageHeight'] = height;
 
-                resolve({
-                  objectURL,
-                  exifData,
-                } as INgxAdvancedImgBitmapOptimization);
-
                 return;
               }
 
@@ -1134,14 +1108,6 @@ export class NgxAdvancedImgBitmap {
                 if (quality < qualityFloor) {
                   // keep it within a given quality floor
                   quality = qualityFloor;
-                }
-
-                // clear any existing object urls as necessary
-                if (objectURL) {
-                  try {
-                    domURL.revokeObjectURL(objectURL);
-                  } catch (error) {
-                  }
                 }
 
                 // if the quality is too high, reduce it and try again
@@ -1175,14 +1141,6 @@ export class NgxAdvancedImgBitmap {
                 resizeFactor = scaleFloor;
               }
 
-              // clear any existing object urls as necessary
-              if (objectURL) {
-                try {
-                  domURL.revokeObjectURL(objectURL);
-                } catch (error) {
-                }
-              }
-
               this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
 
               return;
@@ -1196,7 +1154,7 @@ export class NgxAdvancedImgBitmap {
       exifData['ExifImageHeight'] = height;
 
       resolve({
-        objectURL,
+        blob,
         exifData,
       } as INgxAdvancedImgBitmapOptimization);
     });
