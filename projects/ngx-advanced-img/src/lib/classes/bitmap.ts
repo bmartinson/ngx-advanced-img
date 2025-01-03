@@ -5,6 +5,7 @@ import { Observable, Subject } from 'rxjs';
 
 import Timeout = NodeJS.Timeout;
 import { NgxAdvancedImgJxon } from './jxon';
+const libheif = require('libheif-js/wasm-bundle');
 
 export type NgxAdvancedImgResolution = string | '';
 
@@ -435,17 +436,27 @@ export class NgxAdvancedImgBitmap {
 
     // HEICs need to be converted before loading
     let needsHEICConversion = false;
+    let blobData: Blob;
     if (typeof this.src === 'string') {
       if (this.src.startsWith('data:image/heic')) {
         needsHEICConversion = true;
         // convert to blob
-        this.src = NgxAdvancedImgBitmap.dataURItoBlob(this.src);
       }
+      
+      this.src = NgxAdvancedImgBitmap.dataURItoBlob(this.src);
     } else if (this.src.type === 'image/heic') {
       needsHEICConversion = true;
     }
 
-    if (needsHEICConversion) {
+    blobData = this.src;
+
+    if (false) {
+      const decoder = new libheif.HeifDecoder();
+      const data = decoder.decode(this.src); 
+      const image = data[0];
+      console.log("image", image);
+      const width = image.get_width();
+      const height = image.get_height();
       const jpeg = await NgxAdvancedImgBitmap.convertHEIC(this.src as Blob, 'image/jpeg');
 
       this.src = jpeg;
@@ -466,57 +477,51 @@ export class NgxAdvancedImgBitmap {
         this.image.crossOrigin = 'anonymous';
       }
 
-      // image loading error handler
-      const onerror: () => Promise<void> = async () => {
-        this.loaded = false;
-        this.size = 0;
+        // throw error if image has been destroyed
+        if (!this.image) {
+          reject(this);
+        }
 
-        // ensure that no expiration clock is running if we failed
+        // store the blob's file size
+        this._initialFileSize = blobData.size;
+
+        // if we have an expiration clock ticking, clear it
         if (this.expirationClock) {
           clearTimeout(this.expirationClock);
         }
 
-        reject(this);
-      };
-
-      // image load success handler
-      this.image.onload = () => {
-        if (!this.image) {
-          // throw error if image has been destroyed
-          return;
+        // start the clock for when to destroy ourselves if we are not 0, infinitely
+        if (this.ttl > 0) {
+          this.expirationClock = setTimeout(this.onExpired.bind(this), this.ttl * 1000);
         }
 
-        this.getImageBlob(this.image.src).then((blobData: Blob) => {
-          // throw error if image has been destroyed
+        const fileReader: FileReader = new FileReader();
+
+        // when the file reader successfully loads array buffers, process them
+        fileReader.onload = async (event: Event) => {
+          // if image has been destroyed error out
           if (!this.image) {
-            reject(this);
+            onerror();
+            return;
           }
 
-          // store the blob's file size
-          this._initialFileSize = blobData.size;
+          const buffer: Uint8Array = new Uint8Array((event.target as any).result);
+          this._mimeType = NgxAdvancedImgBitmap.detectMimeType(buffer, blobData.type);
 
-          // if we have an expiration clock ticking, clear it
-          if (this.expirationClock) {
-            clearTimeout(this.expirationClock);
+          // convert heic to jpeg if needed
+          if (this._mimeType === 'image/heic') {
+            
           }
 
-          // start the clock for when to destroy ourselves if we are not 0, infinitely
-          if (this.ttl > 0) {
-            this.expirationClock = setTimeout(this.onExpired.bind(this), this.ttl * 1000);
-          }
+          // wait for image load
 
-          const fileReader: FileReader = new FileReader();
-
-          // when the file reader successfully loads array buffers, process them
-          fileReader.onload = async (event: Event) => {
-            // if image has been destroyed error out
+          // image load success handler
+          this.image.onload = async () => {
+            console.log('image loaded');
             if (!this.image) {
-              onerror();
+              // throw error if image has been destroyed
               return;
             }
-
-            const buffer: Uint8Array = new Uint8Array((event.target as any).result);
-            this._mimeType = NgxAdvancedImgBitmap.detectMimeType(buffer, blobData.type);
 
             const domURL: any = URL || webkitURL || window.URL;
 
@@ -689,55 +694,69 @@ export class NgxAdvancedImgBitmap {
             }
           };
 
-          // if we fail to load the file header data, throw an error to be captured by the promise catch
-          fileReader.onerror = () => {
-            throw new Error('Couldn\'t read file header for download');
-          };
+          // image load failure handler
+          this.image.onerror = onerror;
 
-          // load the file data array buffer once we have the blob
-          fileReader.readAsArrayBuffer(blobData);
-        }).catch(onerror.bind(this));
+          // calculate a unique revision signature to ensure we pull the image with the correct CORS headers
+          let rev = '';
+          if (this.revision >= 0 && (typeof this.src === 'string' && this.src.indexOf('base64') === -1)) {
+            if (this.src.indexOf('?') >= 0) {
+              rev = '&rev=' + this.revision;
+            } else {
+              rev = '?rev=' + this.revision;
+            }
+          }
+
+          // create a properly configured url despite protocol - make sure any resolution data is cleared
+          if (typeof this.src === 'string') {
+            if (this.resolution === '') {
+              // distinct loads should take the direct source url
+              url = this.src;
+            } else {
+              // clear resolution information if provided for situations where we intend to use some resolution
+              url = this.src.replace(/_(.*)/g, '');
+            }
+
+            // append resolution and revision information for all scenarios if provided
+            url += this.resolution + rev;
+
+            // load the image
+            this.image.src = url
+          } else {
+            this.image.src = URL.createObjectURL(this.src);
+
+            // store the original blob file size
+            this._initialFileSize = this.src.size;
+
+            // parse the exif data direction while the image content loads
+            exif.parse(this.src, true).then((exifData: any) => {
+              this._exifData = exifData;
+            });
+          }
+        };
+
+        // if we fail to load the file header data, throw an error to be captured by the promise catch
+        fileReader.onerror = () => {
+          throw new Error('Couldn\'t read file header for download');
+        };
+
+        // load the file data array buffer once we have the blob
+        fileReader.readAsArrayBuffer(blobData);
+
+
+      // image loading error handler
+      const onerror: () => Promise<void> = async () => {
+        console.error('image load error');
+        this.loaded = false;
+        this.size = 0;
+
+        // ensure that no expiration clock is running if we failed
+        if (this.expirationClock) {
+          clearTimeout(this.expirationClock);
+        }
+
+        reject(this);
       };
-
-      // image load failure handler
-      this.image.onerror = onerror;
-
-      // calculate a unique revision signature to ensure we pull the image with the correct CORS headers
-      let rev = '';
-      if (this.revision >= 0 && (typeof this.src === 'string' && this.src.indexOf('base64') === -1)) {
-        if (this.src.indexOf('?') >= 0) {
-          rev = '&rev=' + this.revision;
-        } else {
-          rev = '?rev=' + this.revision;
-        }
-      }
-
-      // create a properly configured url despite protocol - make sure any resolution data is cleared
-      if (typeof this.src === 'string') {
-        if (this.resolution === '') {
-          // distinct loads should take the direct source url
-          url = this.src;
-        } else {
-          // clear resolution information if provided for situations where we intend to use some resolution
-          url = this.src.replace(/_(.*)/g, '');
-        }
-
-        // append resolution and revision information for all scenarios if provided
-        url += this.resolution + rev;
-
-        // load the image
-        this.image.src = url
-      } else {
-        this.image.src = URL.createObjectURL(this.src);
-
-        // store the original blob file size
-        this._initialFileSize = this.src.size;
-
-        // parse the exif data direction while the image content loads
-        exif.parse(this.src, true).then((exifData: any) => {
-          this._exifData = exifData;
-        });
-      }
     });
   }
 
@@ -1238,17 +1257,13 @@ export class NgxAdvancedImgBitmap {
    *
    * @param url The url to the image to load the blob data.
    */
-  private async getImageBlob(url: string): Promise<Blob> {
-    if (!this.image) {
-      return Promise.reject(new Error('Image not loaded'));
-    }
-
+  private async getImageBlob(url: string, anonymous: boolean): Promise<Blob> {
     const headers: Headers = new Headers();
     headers.set('Access-Control-Allow-Origin', '*');
 
     const response: Response = await fetch(url, {
       method: 'GET',
-      mode: this.image.crossOrigin !== 'anonymous' ? 'no-cors' : undefined,
+      mode: !anonymous ? 'no-cors' : undefined,
       headers,
     });
 
