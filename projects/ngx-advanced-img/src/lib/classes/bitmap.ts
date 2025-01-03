@@ -1,11 +1,12 @@
 import * as exif from 'exifr';
 import mime from 'mime';
-import heic2any from 'heic2any';
 import { Observable, Subject } from 'rxjs';
 
 import Timeout = NodeJS.Timeout;
 import { NgxAdvancedImgJxon } from './jxon';
-const libheif = require('libheif-js/wasm-bundle');
+//const libheif = require('libheif-js/wasm-bundle');
+// @ts-ignore
+import libheif from 'libheif-js/wasm-bundle';
 
 export type NgxAdvancedImgResolution = string | '';
 
@@ -353,35 +354,80 @@ export class NgxAdvancedImgBitmap {
     return false;
   }
 
-  /**
-   * Standard function to convert a HEIC image to a different format for further processing.
-   *
-   * @param heic The HEIC file to convert.
-   * @param format The format to convert the HEIC file to.
-   */
-  private static convertHEIC(blob: Blob, format: 'image/jpeg' | 'image/png'): Promise<Blob> {
-    return heic2any({
-      blob: blob,      // Input HEIC File object
-      toType: format, // Desired output format
-    }).then((convertedBlob: Blob | Blob[]) => {
-      // use first image if HEIC file contains multiple images
-      if (Array.isArray(convertedBlob)) {
-        convertedBlob = convertedBlob[0];
-      }
-
-      return convertedBlob;
-    }).catch((error: any) => {
-      console.error('Error during HEIC to JPEG conversion:', error);
-      return Promise.reject(error);
-    });
-  }
-
   private static canvasToBlobPromise(canvas: HTMLCanvasElement, mimeType = 'image/png', quality = 1.0): Promise<Blob | null> {
     return new Promise((resolve, reject) => {
       canvas.toBlob((blob) => {
         resolve(blob);
       }, mimeType, quality);
     });
+  }
+
+  private static imageDataToBlob(imageData: ImageData, mimeType: string, quality: number): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      let canvas = document.createElement('canvas');
+      canvas.width = imageData.width;
+      canvas.height = imageData.height;
+      let ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Could not get 2d context');
+      }
+  
+      ctx.putImageData(imageData, 0, 0);
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          return reject("ERR_CANVAS Error on converting imagedata to blob: Could not get blob from canvas");
+        }
+
+        return resolve(blob);
+      }, mimeType, quality);
+    });
+  }
+
+  private static processSingleImage(image: any): Promise<ImageData> {
+    return new Promise((resolve, reject) => {
+      const w = image.get_width();
+      const h = image.get_height();
+      const whiteImage = new ImageData(w, h);
+      for (let i = 0; i < w * h; i++) {
+        whiteImage.data[i * 4 + 3] = 255;
+      }
+      image.display(whiteImage, (imageData: ImageData | null) => {
+        if (!imageData) {
+          return reject(
+            "ERR_LIBHEIF Error while processing single image and generating image data, could not ensure image"
+          );
+        }
+        resolve(imageData);
+      });
+    });
+  }
+
+  private static async decodeHeic(buffer: Uint8Array): Promise<ImageData> {
+      const decoder = new libheif.HeifDecoder();
+      let imagesArr = decoder.decode(buffer);
+      if (!imagesArr || !imagesArr.length) {
+        throw "ERR_LIBHEIF format not supported";
+      }
+      imagesArr = imagesArr.filter((x: any) => {
+        let valid = true;
+        try {
+          /*
+          sometimes the heic container is valid
+          yet the images themselves are corrupt
+          */
+          x.get_height();
+        } catch (e) {
+          valid = false;
+        }
+        return valid;
+      });
+      if (!imagesArr.length) {
+        throw "ERR_LIBHEIF Heic doesn't contain valid images";
+      }
+  
+      // use the first frame if heic contains multiple images
+      return NgxAdvancedImgBitmap.processSingleImage(imagesArr[0]);
   }
   
 
@@ -450,18 +496,6 @@ export class NgxAdvancedImgBitmap {
 
     blobData = this.src;
 
-    if (false) {
-      const decoder = new libheif.HeifDecoder();
-      const data = decoder.decode(this.src); 
-      const image = data[0];
-      console.log("image", image);
-      const width = image.get_width();
-      const height = image.get_height();
-      const jpeg = await NgxAdvancedImgBitmap.convertHEIC(this.src as Blob, 'image/jpeg');
-
-      this.src = jpeg;
-    }
-
     // if we have an expiration clock ticking, clear it
     if (this.expirationClock) {
       clearTimeout(this.expirationClock);
@@ -510,7 +544,9 @@ export class NgxAdvancedImgBitmap {
 
           // convert heic to jpeg if needed
           if (this._mimeType === 'image/heic') {
-            
+            const imageData = await NgxAdvancedImgBitmap.decodeHeic(buffer);
+            this.src = await NgxAdvancedImgBitmap.imageDataToBlob(imageData, 'image/jpeg', .92);
+            this._mimeType = 'image/jpeg';
           }
 
           // wait for image load

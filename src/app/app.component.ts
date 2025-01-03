@@ -133,14 +133,17 @@ export class AppComponent {
               ]);
 
               performance.mark('optimization_start');
-              bitmap.optimize(mimeType, +this.quality, +this.scale / 100, +this.maxDimension, {
-                sizeLimit: this.size ? +this.size : undefined,
-                minDimension: 100,
-                minScale: 0.025,
-                minQuality: 0.8,
-                mode: this.mode,
-                strict: !!this.strictMode
-              }).then((data: INgxAdvancedImgBitmapOptimization) => {
+              bitmap.optimize(
+                mimeType,
+                0.8,
+                1,
+                2900,
+                {
+                  minQuality: 0.8,
+                  minDimension: 2900,
+                  mode: 'prefer-size',
+                }
+              ).then((data: INgxAdvancedImgBitmapOptimization) => {
                 performance.mark('optimization_end');
                 performance.measure('Image Optimization', 'optimization_start', 'optimization_end');
 

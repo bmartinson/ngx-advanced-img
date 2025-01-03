@@ -1,6 +1,6 @@
 {
   "name": "@kbrt38/ngx-advanced-img",
-  "version": "2.1.8",
+  "version": "2.2.1",
   "private": false,
   "license": "MIT",
   "author": "Brian Martinson <brian@brianmartinson.com> (https://brianmartinson.com/)",
@@ -29,7 +29,7 @@
     "@angular/core": ">= 15.0.0",
     "@xmldom/xmldom": ">= 0.8.10",
     "exifr": ">= 7.1.3",
-    "heic2any": "^0.0.4",
+    "libheif-js": "^1.18.2",
     "mime": ">= 4.0.4",
     "rxjs": ">= 7.8.1"
   },
