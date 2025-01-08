@@ -26,7 +26,7 @@ export class NgxAdvancedImgHeicConverter {
 					  "ERR_LIBHEIF Error while processing single image and generating image data, could not ensure image"
 				  );
 			  }
-        
+
 				resolve(imageData);
 			});
 		});
@@ -113,7 +113,7 @@ export class NgxAdvancedImgHeicConverter {
 
 			// if we fail to load the file header data, throw an error to be captured by the promise catch
 			fileReader.onerror = () => {
-				throw new Error('Couldn\'t read file header for download');
+        reject(new Error('Failed to load file header data'));
 			};
 	
 			// load the file data array buffer once we have the blob
