@@ -223,7 +223,7 @@ export class NgxAdvancedImgBitmap {
     this._mimeType = 'unknown';
     this._objectURL = '';
     this._fileSize = this._initialFileSize = 0;
-    this._exifData = null; // prevent failure when using JSON.parse on undefined
+    this._exifData = {}; // prevent failure when using JSON.parse on undefined
     this.debug = false;
   }
 
@@ -603,7 +603,7 @@ export class NgxAdvancedImgBitmap {
               if (typeof this.src === 'string') {
                 // store the exif data
                 exif.parse(blobData, true).then((exifData: any) => {
-                  this._exifData = exifData;
+                  this._exifData = exifData || {};
                 });
               }
 
@@ -771,7 +771,7 @@ export class NgxAdvancedImgBitmap {
 
             // parse the exif data direction while the image content loads
             exif.parse(this.src, true).then((exifData: any) => {
-              this._exifData = exifData;
+              this._exifData = exifData || {};
             });
           }
         };
