@@ -223,6 +223,7 @@ export class NgxAdvancedImgBitmap {
     this._mimeType = 'unknown';
     this._objectURL = '';
     this._fileSize = this._initialFileSize = 0;
+    this._exifData = null; // prevent failure when using JSON.parse on undefined
     this.debug = false;
   }
 
