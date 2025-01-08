@@ -55,16 +55,16 @@ export class NgxAdvancedImgBitmap {
   public image: HTMLImageElement | undefined;
   public size: number;
   public debug: boolean; // set to true for console logging
-  private _ttl: number;	// time to live in seconds after it has been loaded
-  private loadedAt: Date | null;
-  private expirationClock: Timeout | null;
-  private _destroyed: Subject<INgxAdvancedImgBitmapDataSignature> | undefined;
-  private _objectURL: string;
-  private _exifData: any;
-  private _mimeType: string;
-  private _orientation: number;
-  private _fileSize: number;
-  private _initialFileSize: number;
+  protected _ttl: number;	// time to live in seconds after it has been loaded
+  protected loadedAt: Date | null;
+  protected expirationClock: Timeout | null;
+  protected _destroyed: Subject<INgxAdvancedImgBitmapDataSignature> | undefined;
+  protected _objectURL: string;
+  protected _exifData: any;
+  protected _mimeType: string;
+  protected _orientation: number;
+  protected _fileSize: number;
+  protected _initialFileSize: number;
 
   /**
    * The object URL format of the image that can be used for direct downloading to an end-user's machine.
@@ -362,7 +362,7 @@ export class NgxAdvancedImgBitmap {
     });
   }
 
-  private static imageDataToBlob(imageData: ImageData, mimeType: string, quality: number): Promise<Blob> {
+  protected static imageDataToBlob(imageData: ImageData, mimeType: string, quality: number): Promise<Blob> {
     return new Promise((resolve, reject) => {
       let canvas = document.createElement('canvas');
       canvas.width = imageData.width;
@@ -403,7 +403,7 @@ export class NgxAdvancedImgBitmap {
     });
   }
 
-  private static async decodeHeic(buffer: Uint8Array): Promise<ImageData> {
+  protected static async decodeHeic(buffer: Uint8Array): Promise<ImageData> {
       const decoder = new libheif.HeifDecoder();
       let imagesArr = decoder.decode(buffer);
       if (!imagesArr || !imagesArr.length) {
@@ -544,9 +544,10 @@ export class NgxAdvancedImgBitmap {
 
           // convert heic to jpeg if needed
           if (this._mimeType === 'image/heic') {
-            const imageData = await NgxAdvancedImgBitmap.decodeHeic(buffer);
-            this.src = await NgxAdvancedImgBitmap.imageDataToBlob(imageData, 'image/jpeg', .92);
-            this._mimeType = 'image/jpeg';
+            console.log("still heic")
+            // const imageData = await NgxAdvancedImgBitmap.decodeHeic(buffer);
+            // this.src = await NgxAdvancedImgBitmap.imageDataToBlob(imageData, 'image/jpeg', .92);
+            // this._mimeType = 'image/jpeg';
           }
 
           // wait for image load
@@ -1255,7 +1256,7 @@ export class NgxAdvancedImgBitmap {
    * Helper function that adjusts the image based on any exif data indicating
    * a different orientation be performed.
    */
-  private async adjustForExifOrientation(): Promise<void> {
+  protected async adjustForExifOrientation(): Promise<void> {
     if (!this.image) {
       return Promise.reject(new Error('Image not loaded'));
     }
@@ -1278,7 +1279,7 @@ export class NgxAdvancedImgBitmap {
   /**
    * Event handler for when expiration clocks are complete and we must dispose of ourselves.
    */
-  private onExpired(): void {
+  protected onExpired(): void {
     // only destroy if we had been loaded, otherwise let the loading pathways dispose of this bitmap
     if (this.loaded) {
       this.destroy();
