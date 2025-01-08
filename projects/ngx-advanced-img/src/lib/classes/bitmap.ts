@@ -545,9 +545,12 @@ export class NgxAdvancedImgBitmap {
           // convert heic to jpeg if needed
           if (this._mimeType === 'image/heic') {
             console.log("still heic")
-            // const imageData = await NgxAdvancedImgBitmap.decodeHeic(buffer);
-            // this.src = await NgxAdvancedImgBitmap.imageDataToBlob(imageData, 'image/jpeg', .92);
-            // this._mimeType = 'image/jpeg';
+            const imageData = await NgxAdvancedImgBitmap.decodeHeic(buffer);
+            
+            // preserve quality settings used in heic2any
+            this.src = await NgxAdvancedImgBitmap.imageDataToBlob(imageData, 'image/jpeg', .92);
+            
+            this._mimeType = 'image/jpeg';
           }
 
           // wait for image load
