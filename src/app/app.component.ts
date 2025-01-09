@@ -95,8 +95,9 @@ export class AppComponent {
 
     // if not retaining mime type, let's use webp by default
     let defaultMimeType = "image/webp";
+    let supportsWebp = NgxAdvancedImgBitmap.isMimeTypeSupported('image/webp');
 
-    if (!this.retainMimeType && !NgxAdvancedImgBitmap.isMimeTypeSupported('image/webp')) {
+    if (!this.retainMimeType && !supportsWebp) {
       this.prettyLog(['image/webp output is not supported by your browser....using image/jpeg instead.'], 'error');
 
       // switch to use jpeg for fast optimization
@@ -108,7 +109,10 @@ export class AppComponent {
         // convert heic to jpeg
         let src: Blob = file;
         if (file.type === 'image/heic') {
-          const result = await this.workerConvert(file);
+          const result = await this.workerConvert(
+            file,
+            supportsWebp ? 'image/webp' : 'image/jpeg'
+          );
 
           src = result.blob;
         }
@@ -189,10 +193,10 @@ export class AppComponent {
     });
   }
 
-  private workerConvert(file: File): Promise<INgxAdvancedImgHeicConversion> {
+  private workerConvert(file: File, mimeType: string): Promise<INgxAdvancedImgHeicConversion> {
 		return new Promise((resolve, reject) => {
 			const id = (Math.random() * new Date().getTime()).toString();
-			const message = { id, file };
+			const message = { id, file, mimeType };
 			console.log('sending message to worker', import.meta.url);
 			const worker = new Worker(new URL('./app.worker', import.meta.url), { type: `module` });
 			worker.postMessage(message);

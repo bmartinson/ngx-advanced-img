@@ -1285,23 +1285,4 @@ export class NgxAdvancedImgBitmap {
     // the expiration clock is now complete
     this.expirationClock = null;
   }
-
-  /**
-   * Fetch the blob info for a given url.
-   *
-   * @param url The url to the image to load the blob data.
-   */
-  private async getImageBlob(url: string, anonymous: boolean): Promise<Blob> {
-    const headers: Headers = new Headers();
-    headers.set('Access-Control-Allow-Origin', '*');
-
-    const response: Response = await fetch(url, {
-      method: 'GET',
-      mode: !anonymous ? 'no-cors' : undefined,
-      headers,
-    });
-
-    return response.blob();
-  }
-
 }

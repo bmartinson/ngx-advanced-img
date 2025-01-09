@@ -105,7 +105,7 @@ export class NgxAdvancedImgHeicConverter {
    * @param src 
    * @returns 
    */
-	public static async convert(src: Blob): Promise<INgxAdvancedImgHeicConversion> {
+	public static async convert(src: Blob, mimeType: string = 'image/jpeg'): Promise<INgxAdvancedImgHeicConversion> {
 		// if no valid source, then reject the load
 		if (!src) {
 			return Promise.reject(new Error('No valid source provided'));
@@ -122,7 +122,7 @@ export class NgxAdvancedImgHeicConverter {
 
         const imageData = await NgxAdvancedImgHeicConverter.decodeHeic(buffer);
         
-        const blob = await NgxAdvancedImgHeicConverter.imageDataToBlobOffscreen(imageData, 'image/jpeg', .92);
+        const blob = await NgxAdvancedImgHeicConverter.imageDataToBlobOffscreen(imageData, mimeType, .92);
 
         const exifData = await exifPromise;
 
