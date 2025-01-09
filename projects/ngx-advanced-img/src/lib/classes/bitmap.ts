@@ -1,10 +1,12 @@
 import * as exif from 'exifr';
 import mime from 'mime';
-import heic2any from 'heic2any';
 import { Observable, Subject } from 'rxjs';
 
 import Timeout = NodeJS.Timeout;
 import { NgxAdvancedImgJxon } from './jxon';
+// @ts-ignore
+import libheif from 'libheif-js/wasm-bundle';
+import { NgxAdvancedImgHeicConverter } from './heic-converter';
 
 export type NgxAdvancedImgResolution = string | '';
 
@@ -21,7 +23,7 @@ export interface INgxAdvancedImgBitmapDataSignature {
 }
 
 export interface INgxAdvancedImgBitmapOptimization {
-  objectURL: any;
+  blob: Blob;
   exifData: any;
 }
 
@@ -221,6 +223,7 @@ export class NgxAdvancedImgBitmap {
     this._mimeType = 'unknown';
     this._objectURL = '';
     this._fileSize = this._initialFileSize = 0;
+    this._exifData = {}; // prevent failure when using JSON.parse on undefined
     this.debug = false;
   }
 
@@ -352,26 +355,47 @@ export class NgxAdvancedImgBitmap {
     return false;
   }
 
-  /**
-   * Standard function to convert a HEIC image to a different format for further processing.
-   *
-   * @param heic The HEIC file to convert.
-   * @param format The format to convert the HEIC file to.
+    /**
+   * Converts a ImageData object to a Blob
+   * @param imageData Pixel data to convert to a Blob
+   * @param mimeType The mimetype of the resulting blob
+   * @param quality The quality of the resulting conversion
+   * @returns 
    */
-  private static convertHEIC(blob: Blob, format: 'image/jpeg' | 'image/png'): Promise<Blob> {
-    return heic2any({
-      blob: blob,      // Input HEIC File object
-      toType: format, // Desired output format
-    }).then((convertedBlob: Blob | Blob[]) => {
-      // use first image if HEIC file contains multiple images
-      if (Array.isArray(convertedBlob)) {
-        convertedBlob = convertedBlob[0];
-      }
+    private static imageDataToBlob(imageData: ImageData, mimeType: string, quality: number): Promise<Blob> {
+      return new Promise((resolve, reject) => {
+        let canvas = document.createElement('canvas');
+        canvas.width = imageData.width;
+        canvas.height = imageData.height;
+        let ctx = canvas.getContext('2d');
+        if (!ctx) {
+          throw new Error('Could not get 2d context');
+        }
+    
+        ctx.putImageData(imageData, 0, 0);
+  
+        canvas.toBlob((blob: Blob | null) => {
+          if (!blob) {
+            return reject("ERR_CANVAS Error on converting imagedata to blob: Could not get blob from canvas");
+          }
+  
+          return resolve(blob);
+        }, mimeType, quality);
+      });
+    }
 
-      return convertedBlob;
-    }).catch((error: any) => {
-      console.error('Error during HEIC to JPEG conversion:', error);
-      return Promise.reject(error);
+  /*
+   * Helper function to get the image data from a canvas
+   */
+  private static canvasToBlobPromise(canvas: HTMLCanvasElement, mimeType = 'image/png', quality = 1.0): Promise<Blob | null> {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error('Failed to convert canvas to blob'));
+        }
+      }, mimeType, quality);
     });
   }
 
@@ -424,17 +448,12 @@ export class NgxAdvancedImgBitmap {
       return Promise.reject(new Error('No valid source provided'));
     }
 
-    // HEICs need to be converted before loading
-    let needsHEICConversion = false;
-    let heicConversionAttempted = false;
+    let blobData: Blob;
     if (typeof this.src === 'string') {
-      if (this.src.startsWith('data:image/heic')) {
-        needsHEICConversion = true;
-        // convert to blob
-      }
-    } else if (this.src.type === 'image/heic') {
-      needsHEICConversion = true;
+      this.src = NgxAdvancedImgBitmap.dataURItoBlob(this.src);
     }
+
+    blobData = this.src;
 
     // if we have an expiration clock ticking, clear it
     if (this.expirationClock) {
@@ -451,310 +470,291 @@ export class NgxAdvancedImgBitmap {
         this.image.crossOrigin = 'anonymous';
       }
 
-      // image loading error handler
-      const onerror: () => Promise<void> = async () => {
-        if (!heicConversionAttempted && needsHEICConversion) {
-          try {
-            heicConversionAttempted = true; // Ensure we only attempt conversion once
-            const jpeg = await NgxAdvancedImgBitmap.convertHEIC(this.src as Blob, 'image/jpeg');
-            this.src = jpeg; // Update the source with the converted JPEG
+      // throw error if image has been destroyed
+      if (!this.image) {
+        reject(this);
+      }
 
-            if (this.image) {
-              this.image.src = URL.createObjectURL(this.src);
+      // store the blob's file size
+      this._initialFileSize = blobData.size;
 
-              // store the original blob file size
-              this._initialFileSize = this.src.size;
-  
-              // parse the exif data direction while the image content loads
-              exif.parse(this.src, true).then((exifData: any) => {
-                this._exifData = exifData;
+      // if we have an expiration clock ticking, clear it
+      if (this.expirationClock) {
+        clearTimeout(this.expirationClock);
+      }
+
+      // start the clock for when to destroy ourselves if we are not 0, infinitely
+      if (this.ttl > 0) {
+        this.expirationClock = setTimeout(this.onExpired.bind(this), this.ttl * 1000);
+      }
+
+      const fileReader: FileReader = new FileReader();
+
+      // when the file reader successfully loads array buffers, process them
+      fileReader.onload = async (event: Event) => {
+        // if image has been destroyed error out
+        if (!this.image) {
+          onerror();
+          return;
+        }
+
+        const buffer: Uint8Array = new Uint8Array((event.target as any).result);
+        this._mimeType = NgxAdvancedImgBitmap.detectMimeType(buffer, blobData.type);
+
+        // convert heic to jpeg if needed
+        if (this._mimeType === 'image/heic') {
+          console.log("Converting HEIC to JPEG without worker");
+          const imageData = await NgxAdvancedImgHeicConverter.decodeHeic(buffer);
+          
+          // preserve quality settings used in heic2any
+          this.src = await NgxAdvancedImgBitmap.imageDataToBlob(imageData, 'image/jpeg', .92) as Blob;
+          
+          this._mimeType = this.src.type;
+        }
+
+        // wait for image load
+
+        // image load success handler
+        this.image.onload = async () => {
+          if (!this.image) {
+            // throw error if image has been destroyed
+            return;
+          }
+
+          const domURL: any = URL || webkitURL || window.URL;
+
+          if (this.mimeType !== 'image/svg+xml' || !allowXMLLoading) {
+            // if our browser doesn't support the URL implementation, fail the load
+            if (!domURL || !(domURL).createObjectURL) {
+              onerror();
+
+              return;
+            }
+
+            // create a canvas to paint to
+            let canvas: HTMLCanvasElement | null = document.createElement('canvas');
+
+            // configure the dimensions of the canvas
+            canvas.width = this.image.width;
+            canvas.height = this.image.height;
+
+            // acquire the rendering context
+            const ctx: CanvasRenderingContext2D | null = canvas?.getContext('2d', { desynchronized: false, willReadFrequently: true });
+
+            // if the context cannot be acquired, we should quit the operation
+            if (!ctx) {
+              onerror();
+
+              return;
+            }
+
+            // Enable image smoothing
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+
+            ctx.drawImage(this.image, 0, 0);
+
+            // if we haven't loaded anonymously, we'll taint the canvas and crash the application
+            let dataUri: string = (anonymous) ? canvas.toDataURL(this._mimeType, fullQualityLoad ? 1 : undefined) : '';
+
+            if (typeof this.src === 'string') {
+              // store the exif data
+              exif.parse(blobData, true).then((exifData: any) => {
+                this._exifData = exifData || {};
               });
             }
-          } catch (conversionError) {
-            console.error('HEIC conversion failed:', conversionError);
 
-            this.loaded = false;
-            this.size = 0;
-      
-            // Ensure that no expiration clock is running if we failed
+            // if we got the bitmap data, create the link to download and invoke it
+            if (dataUri) {
+              // clear any existing object urls as necessary
+              if (this._objectURL) {
+                try {
+                  domURL.revokeObjectURL(this._objectURL);
+                } catch (error) {
+                }
+              }
+
+              // get the bitmap data in blob format
+              this._objectURL = domURL.createObjectURL(NgxAdvancedImgBitmap.dataURItoBlob(dataUri));
+            }
+
+            // clean up the canvas
+            if (canvas) {
+              ctx?.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+              canvas.width = canvas.height = 0;
+              canvas = null;
+            }
+
+            this.loaded = true;
+            this.size = this.image.naturalWidth * this.image.naturalHeight;
+
+            const head: string = `data:${this._mimeType};base64,`;
+            this._fileSize = Math.round(atob(dataUri.substring(head.length)).length);
+
+            // track the time at which this asset was first asked to load
+            this.loadedAt = new Date();
+
+            // if we have an expiration clock ticking, clear it
             if (this.expirationClock) {
               clearTimeout(this.expirationClock);
             }
 
-            reject(this);
-          }
-        } else {
-          this.loaded = false;
-          this.size = 0;
-    
-          // Ensure that no expiration clock is running if we failed
-          if (this.expirationClock) {
-            clearTimeout(this.expirationClock);
-          }
-    
-          reject(this);
-        }
-      };
+            await this.adjustForExifOrientation();
 
-      // image load success handler
-      this.image.onload = () => {
-        if (!this.image) {
-          // throw error if image has been destroyed
-          return;
-        }
+            // if we loaded a non-svg, then we are done loading
+            resolve(this);
+          } else {
+            const client: XMLHttpRequest = new XMLHttpRequest();
+            client.open('GET', this.image.src);
+            client.onreadystatechange = () => {
+              // if the document ready state is finished and ready
+              if (client.readyState === 4) {
+                let svg: any = (new NgxAdvancedImgJxon()).stringToXml(client.responseText).getElementsByTagName('svg')[0];
 
-        this.getImageBlob(this.image.src).then((blobData: Blob) => {
-          // throw error if image has been destroyed
-          if (!this.image) {
-            reject(this);
-          }
+                // 'viewBox' is now a string, parse the string for the viewBox values - can be separated by whitespace and/or a comma
+                const viewBox: string[] = svg.getAttribute('viewBox').split(/[ ,]/);
 
-          // store the blob's file size
-          this._initialFileSize = blobData.size;
+                // make sure the viewBox is set
+                if (viewBox.length !== 4) {
+                  onerror();
 
-          // if we have an expiration clock ticking, clear it
-          if (this.expirationClock) {
-            clearTimeout(this.expirationClock);
-          }
+                  return;
+                }
 
-          // start the clock for when to destroy ourselves if we are not 0, infinitely
-          if (this.ttl > 0) {
-            this.expirationClock = setTimeout(this.onExpired.bind(this), this.ttl * 1000);
-          }
+                // get the width and height from the viewBox
+                const svgWidth: number = +viewBox[2];
+                const svgHeight: number = +viewBox[3];
 
-          const fileReader: FileReader = new FileReader();
+                // viewBox width and height is considered to be a required attribute, so check its existence and validity
+                if (
+                  !svgWidth ||
+                  !svgHeight ||
+                  isNaN(svgWidth) ||
+                  isNaN(svgHeight) ||
+                  !isFinite(svgWidth) ||
+                  !isFinite(svgHeight)
+                ) {
+                  onerror();
 
-          // when the file reader successfully loads array buffers, process them
-          fileReader.onload = async (event: Event) => {
-            // if image has been destroyed error out
-            if (!this.image) {
-              onerror();
-              return;
-            }
+                  return;
+                }
 
-            const buffer: Uint8Array = new Uint8Array((event.target as any).result);
-            this._mimeType = NgxAdvancedImgBitmap.detectMimeType(buffer, blobData.type);
+                // set the width and height from the view box definition
+                svg.setAttribute('width', svgWidth);
+                svg.setAttribute('height', svgHeight);
 
-            const domURL: any = URL || webkitURL || window.URL;
+                // never preserve aspect ratio so the entire image fills the element boundaries
+                svg.setAttribute('preserveAspectRatio', 'none');
 
-            if (this.mimeType !== 'image/svg+xml' || !allowXMLLoading) {
-              // if our browser doesn't support the URL implementation, fail the load
-              if (!domURL || !(domURL).createObjectURL) {
-                onerror();
+                const svgXML: string = (new NgxAdvancedImgJxon()).xmlToString(svg);
+                svg = new Blob([svgXML], { type: this.mimeType + ';charset=utf-8' });
 
-                return;
-              }
+                // if our browser doesn't support the URL implementation, fail the load
+                if (!this.image || !domURL || !(domURL).createObjectURL) {
+                  onerror();
 
-              // create a canvas to paint to
-              let canvas: HTMLCanvasElement | null = document.createElement('canvas');
+                  return;
+                }
 
-              // configure the dimensions of the canvas
-              canvas.width = this.image.width;
-              canvas.height = this.image.height;
+                this.image.onload = async () => {
+                  this.loaded = true;
+                  this.size = svgWidth * svgHeight;
 
-              // acquire the rendering context
-              const ctx: CanvasRenderingContext2D | null = canvas?.getContext('2d', { desynchronized: false, willReadFrequently: true });
+                  // track the time at which this asset was first asked to load
+                  this.loadedAt = new Date();
 
-              // if the context cannot be acquired, we should quit the operation
-              if (!ctx) {
-                onerror();
+                  // if we have an expiration clock ticking, clear it
+                  if (this.expirationClock) {
+                    clearTimeout(this.expirationClock);
+                  }
 
-                return;
-              }
+                  await this.adjustForExifOrientation();
 
-              // Enable image smoothing
-              ctx.imageSmoothingEnabled = true;
-              ctx.imageSmoothingQuality = 'high';
+                  // the image has successfully loaded
+                  resolve(this);
+                };
 
-              ctx.drawImage(this.image, 0, 0);
-
-              // if we haven't loaded anonymously, we'll taint the canvas and crash the application
-              let dataUri: string = (anonymous) ? canvas.toDataURL(this._mimeType, fullQualityLoad ? 1 : undefined) : '';
-
-              if (typeof this.src === 'string') {
-                // store the exif data
-                exif.parse(blobData, true).then((exifData: any) => {
-                  this._exifData = exifData;
-                });
-              }
-
-              // if we got the bitmap data, create the link to download and invoke it
-              if (dataUri) {
                 // clear any existing object urls as necessary
                 if (this._objectURL) {
                   try {
                     domURL.revokeObjectURL(this._objectURL);
                   } catch (error) {
+                    console.error(error);
                   }
                 }
 
-                // get the bitmap data in blob format
-                this._objectURL = domURL.createObjectURL(NgxAdvancedImgBitmap.dataURItoBlob(dataUri));
+                this.image.loading = 'eager';
+                this.image.src = this._objectURL = domURL.createObjectURL(svg);
               }
+            };
 
-              // clean up the canvas
-              if (canvas) {
-                ctx?.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-                canvas.width = canvas.height = 0;
-                canvas = null;
-              }
+            // issue the file load
+            client.send();
+          }
+        };
 
-              this.loaded = true;
-              this.size = this.image.naturalWidth * this.image.naturalHeight;
+        // image load failure handler
+        this.image.onerror = onerror;
 
-              const head: string = `data:${this._mimeType};base64,`;
-              this._fileSize = Math.round(atob(dataUri.substring(head.length)).length);
+        // calculate a unique revision signature to ensure we pull the image with the correct CORS headers
+        let rev = '';
+        if (this.revision >= 0 && (typeof this.src === 'string' && this.src.indexOf('base64') === -1)) {
+          if (this.src.indexOf('?') >= 0) {
+            rev = '&rev=' + this.revision;
+          } else {
+            rev = '?rev=' + this.revision;
+          }
+        }
 
-              // track the time at which this asset was first asked to load
-              this.loadedAt = new Date();
+        // create a properly configured url despite protocol - make sure any resolution data is cleared
+        if (typeof this.src === 'string') {
+          if (this.resolution === '') {
+            // distinct loads should take the direct source url
+            url = this.src;
+          } else {
+            // clear resolution information if provided for situations where we intend to use some resolution
+            url = this.src.replace(/_(.*)/g, '');
+          }
 
-              // if we have an expiration clock ticking, clear it
-              if (this.expirationClock) {
-                clearTimeout(this.expirationClock);
-              }
+          // append resolution and revision information for all scenarios if provided
+          url += this.resolution + rev;
 
-              await this.adjustForExifOrientation();
+          // load the image
+          this.image.src = url
+        } else {
+          this.image.src = URL.createObjectURL(this.src);
 
-              // if we loaded a non-svg, then we are done loading
-              resolve(this);
-            } else {
-              const client: XMLHttpRequest = new XMLHttpRequest();
-              client.open('GET', this.image.src);
-              client.onreadystatechange = () => {
-                // if the document ready state is finished and ready
-                if (client.readyState === 4) {
-                  let svg: any = (new NgxAdvancedImgJxon()).stringToXml(client.responseText).getElementsByTagName('svg')[0];
+          // store the original blob file size
+          this._initialFileSize = this.src.size;
 
-                  // 'viewBox' is now a string, parse the string for the viewBox values - can be separated by whitespace and/or a comma
-                  const viewBox: string[] = svg.getAttribute('viewBox').split(/[ ,]/);
-
-                  // make sure the viewBox is set
-                  if (viewBox.length !== 4) {
-                    onerror();
-
-                    return;
-                  }
-
-                  // get the width and height from the viewBox
-                  const svgWidth: number = +viewBox[2];
-                  const svgHeight: number = +viewBox[3];
-
-                  // viewBox width and height is considered to be a required attribute, so check its existence and validity
-                  if (
-                    !svgWidth ||
-                    !svgHeight ||
-                    isNaN(svgWidth) ||
-                    isNaN(svgHeight) ||
-                    !isFinite(svgWidth) ||
-                    !isFinite(svgHeight)
-                  ) {
-                    onerror();
-
-                    return;
-                  }
-
-                  // set the width and height from the view box definition
-                  svg.setAttribute('width', svgWidth);
-                  svg.setAttribute('height', svgHeight);
-
-                  // never preserve aspect ratio so the entire image fills the element boundaries
-                  svg.setAttribute('preserveAspectRatio', 'none');
-
-                  const svgXML: string = (new NgxAdvancedImgJxon()).xmlToString(svg);
-                  svg = new Blob([svgXML], { type: this.mimeType + ';charset=utf-8' });
-
-                  // if our browser doesn't support the URL implementation, fail the load
-                  if (!this.image || !domURL || !(domURL).createObjectURL) {
-                    onerror();
-
-                    return;
-                  }
-
-                  this.image.onload = async () => {
-                    this.loaded = true;
-                    this.size = svgWidth * svgHeight;
-
-                    // track the time at which this asset was first asked to load
-                    this.loadedAt = new Date();
-
-                    // if we have an expiration clock ticking, clear it
-                    if (this.expirationClock) {
-                      clearTimeout(this.expirationClock);
-                    }
-
-                    await this.adjustForExifOrientation();
-
-                    // the image has successfully loaded
-                    resolve(this);
-                  };
-
-                  // clear any existing object urls as necessary
-                  if (this._objectURL) {
-                    try {
-                      domURL.revokeObjectURL(this._objectURL);
-                    } catch (error) {
-                    }
-                  }
-
-                  this.image.loading = 'eager';
-                  this.image.src = this._objectURL = domURL.createObjectURL(svg);
-                }
-              };
-
-              // issue the file load
-              client.send();
-            }
-          };
-
-          // if we fail to load the file header data, throw an error to be captured by the promise catch
-          fileReader.onerror = () => {
-            throw new Error('Couldn\'t read file header for download');
-          };
-
-          // load the file data array buffer once we have the blob
-          fileReader.readAsArrayBuffer(blobData);
-        }).catch(onerror.bind(this));
+          // parse the exif data direction while the image content loads
+          exif.parse(this.src, true).then((exifData: any) => {
+            this._exifData = exifData || {};
+          });
+        }
       };
 
-      // image load failure handler
-      this.image.onerror = onerror;
+      // if we fail to load the file header data, throw an error to be captured by the promise catch
+      fileReader.onerror = () => {
+        throw new Error('Couldn\'t read file header for download');
+      };
 
-      // calculate a unique revision signature to ensure we pull the image with the correct CORS headers
-      let rev = '';
-      if (this.revision >= 0 && (typeof this.src === 'string' && this.src.indexOf('base64') === -1)) {
-        if (this.src.indexOf('?') >= 0) {
-          rev = '&rev=' + this.revision;
-        } else {
-          rev = '?rev=' + this.revision;
-        }
-      }
+      // load the file data array buffer once we have the blob
+      fileReader.readAsArrayBuffer(blobData);
 
-      // create a properly configured url despite protocol - make sure any resolution data is cleared
-      if (typeof this.src === 'string') {
-        if (this.resolution === '') {
-          // distinct loads should take the direct source url
-          url = this.src;
-        } else {
-          // clear resolution information if provided for situations where we intend to use some resolution
-          url = this.src.replace(/_(.*)/g, '');
+      // image loading error handler
+      const onerror: () => Promise<void> = async () => {
+        console.error('image load error');
+        this.loaded = false;
+        this.size = 0;
+
+        // ensure that no expiration clock is running if we failed
+        if (this.expirationClock) {
+          clearTimeout(this.expirationClock);
         }
 
-        // append resolution and revision information for all scenarios if provided
-        url += this.resolution + rev;
-
-        // load the image
-        this.image.src = url
-      } else {
-        this.image.src = URL.createObjectURL(this.src);
-
-        // store the original blob file size
-        this._initialFileSize = this.src.size;
-
-        // parse the exif data direction while the image content loads
-        exif.parse(this.src, true).then((exifData: any) => {
-          this._exifData = exifData;
-        });
-      }
+        reject(this);
+      };
     });
   }
 
@@ -766,7 +766,7 @@ export class NgxAdvancedImgBitmap {
    * @param fileName The name of the file to save.
    * @param objectURL The object URL to use for the download, if not provided, the original image url will be used.
    */
-  public saveFile(fileName: string, objectURL?: string, mimeType?: string): void {
+  public saveFile(fileName: string, blob?: Blob, mimeType?: string): void {
     if (!this.loaded || !this.image) {
       return;
     }
@@ -785,10 +785,11 @@ export class NgxAdvancedImgBitmap {
     const extension: string | null = mime.getExtension(mimeType);
     let url: string = this.image.src;
 
-    // use the object url if one is present
-    if (objectURL) {
-      url = objectURL;
+    // If a Blob is provided, create an object URL for it
+    if (blob) {
+      url = domURL.createObjectURL(blob);
     } else if (this.objectURL) {
+      // Otherwise, use the existing object URL if one is present
       url = this.objectURL;
     }
 
@@ -832,7 +833,9 @@ export class NgxAdvancedImgBitmap {
       maxDimension,
       options,
       undefined,
-    );
+    ).catch((error: any) => {
+      return Promise.reject(error);
+    });
   }
 
   /**
@@ -859,363 +862,321 @@ export class NgxAdvancedImgBitmap {
     lastOp?: 'quality' | 'scale' | undefined,
     lastSize?: number,
   ): Promise<INgxAdvancedImgBitmapOptimization> {
-    return new Promise((resolve: (value: INgxAdvancedImgBitmapOptimization) => void) => {
-      if (
-        !this.image ||
-        !this.loaded
-      ) {
-        throw new Error('Image not loaded');
-      }
-
-      if (quality < 0 || quality > 1) {
-        throw new Error('The requested image optimization cannot be achieved');
-      }
-
-      // draw the image to the canvas
-      let canvas: HTMLCanvasElement | null = document.createElement('canvas');
-      let width: number = canvas.width = this.image.width * resizeFactor;
-      let height: number = canvas.height = this.image.height * resizeFactor;
-      let minThresholdReached = false;
-
-      // cap the size of the canvas in accordance with te minDimension constraints for optimization
-      if (
-        resizeFactor < 1 &&
-        typeof options?.minDimension === 'number' &&
-        !isNaN(options?.minDimension) &&
-        isFinite(options?.minDimension) &&
-        options?.minDimension > 0 &&
-        (canvas.width < options?.minDimension || canvas.height < options?.minDimension)
-      ) {
-        let minDimensionAspectRatio = canvas.width / canvas.height;
-
-        if (canvas.width > canvas.height) {
-          height = canvas.height = options?.minDimension;
-          width = canvas.width = options?.minDimension * minDimensionAspectRatio;
-        } else {
-          minDimensionAspectRatio = canvas.height / canvas.width;
-          width = canvas.width = options?.minDimension;
-          height = canvas.height = options?.minDimension * minDimensionAspectRatio;
-        }
-
-        minThresholdReached = true;
-      }
-
-      if (
-        typeof options?.minQuality === 'number' &&
-        !isNaN(options?.minQuality) &&
-        isFinite(options?.minQuality) &&
-        options?.minQuality >= 0 &&
-        quality < options?.minQuality
-      ) {
-        minThresholdReached = true;
-      }
-
-      if (
-        typeof options?.minScale === 'number' &&
-        !isNaN(options?.minScale) &&
-        isFinite(options?.minScale) &&
-        options?.minScale >= 0 &&
-        resizeFactor < options?.minScale
-      ) {
-        minThresholdReached = true;
-      }
-
-      // scale the image down based on the max allowed pixel dimension
-      if (
-        typeof maxDimension === 'number' &&
-        !isNaN(maxDimension) &&
-        isFinite(maxDimension) &&
-        maxDimension > 0
-      ) {
-        if (canvas.width > maxDimension) {
-          height = canvas.height = canvas.height * (maxDimension / canvas.width);
-          width = canvas.width = maxDimension;
-          resizeFactor = maxDimension / this.image.width;
-        }
-
-        if (canvas.height > maxDimension) {
-          width = canvas.width = canvas.width * (maxDimension / canvas.height);
-          height = canvas.height = maxDimension;
-          resizeFactor = maxDimension / this.image.height;
-        }
-      }
-
-      const ctx: CanvasRenderingContext2D | null = canvas?.getContext('2d', { desynchronized: false, willReadFrequently: true });
-
-      ctx?.drawImage(
-        this.image,
-        0,
-        0,
-        canvas.width,
-        canvas.height,
-      );
-
-      // if we haven't loaded anonymously, we'll taint the canvas and crash the application
-      let dataUri: string = canvas.toDataURL(type, quality);
-
-      // clean up the canvas
-      if (canvas) {
-        ctx?.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        canvas.width = canvas.height = 0;
-        canvas = null;
-      }
-
-      const domURL: any = URL || webkitURL || window.URL;
-      let objectURL = '';
-
-      // if we got the bitmap data, create the link to download and invoke it
-      if (dataUri) {
-        // get the bitmap data
-        objectURL = domURL.createObjectURL(NgxAdvancedImgBitmap.dataURItoBlob(dataUri));
-      }
-
-      if (!objectURL) {
-        throw new Error('An error occurred while drawing to the canvas');
-      }
-
-      if (typeof options?.sizeLimit === 'number' && !isNaN(options?.sizeLimit) && isFinite(options?.sizeLimit) && options?.sizeLimit > 0) {
-        const head: string = `data:${type};base64,`;
-        const fileSize: number = Math.round(atob(dataUri.substring(head.length)).length);
-
-        if (this.debug) {
-          console.warn('Image Optimization Factors:', options?.mode, quality, resizeFactor, `${fileSize} B`);
-        }
-
+    return new Promise(async (resolve: (value: INgxAdvancedImgBitmapOptimization) => void, reject) => {
+      try {
         if (
-          fileSize > options?.sizeLimit &&
-          (!lastSize || (lastSize && Math.ceil(fileSize) <= Math.ceil(lastSize))) // consider rounding errors
+          !this.image ||
+          !this.loaded
         ) {
-          if (resizeFactor === undefined) {
-            // if the resize factor wasn't supplied set to 1
-            resizeFactor = 1;
+          throw new Error('Image not loaded');
+        }
+  
+        if (quality < 0 || quality > 1) {
+          throw new Error('The requested image optimization cannot be achieved');
+        }
+  
+        // draw the image to the canvas
+        let canvas: HTMLCanvasElement | null = document.createElement('canvas');
+        let width: number = canvas.width = this.image.width * resizeFactor;
+        let height: number = canvas.height = this.image.height * resizeFactor;
+        let minThresholdReached = false;
+  
+        // cap the size of the canvas in accordance with te minDimension constraints for optimization
+        if (
+          resizeFactor < 1 &&
+          typeof options?.minDimension === 'number' &&
+          !isNaN(options?.minDimension) &&
+          isFinite(options?.minDimension) &&
+          options?.minDimension > 0 &&
+          (canvas.width < options?.minDimension || canvas.height < options?.minDimension)
+        ) {
+          let minDimensionAspectRatio = canvas.width / canvas.height;
+  
+          if (canvas.width > canvas.height) {
+            height = canvas.height = options?.minDimension;
+            width = canvas.width = options?.minDimension * minDimensionAspectRatio;
+          } else {
+            minDimensionAspectRatio = canvas.height / canvas.width;
+            width = canvas.width = options?.minDimension;
+            height = canvas.height = options?.minDimension * minDimensionAspectRatio;
           }
-
-          if (resizeFactor <= 0) {
-            throw new Error('Invalid resize factor reached (<= 0)');
+  
+          minThresholdReached = true;
+        }
+  
+        if (
+          typeof options?.minQuality === 'number' &&
+          !isNaN(options?.minQuality) &&
+          isFinite(options?.minQuality) &&
+          options?.minQuality >= 0 &&
+          quality < options?.minQuality
+        ) {
+          minThresholdReached = true;
+        }
+  
+        if (
+          typeof options?.minScale === 'number' &&
+          !isNaN(options?.minScale) &&
+          isFinite(options?.minScale) &&
+          options?.minScale >= 0 &&
+          resizeFactor < options?.minScale
+        ) {
+          minThresholdReached = true;
+        }
+  
+        // scale the image down based on the max allowed pixel dimension
+        if (
+          typeof maxDimension === 'number' &&
+          !isNaN(maxDimension) &&
+          isFinite(maxDimension) &&
+          maxDimension > 0
+        ) {
+          if (canvas.width > maxDimension) {
+            height = canvas.height = canvas.height * (maxDimension / canvas.width);
+            width = canvas.width = maxDimension;
+            resizeFactor = maxDimension / this.image.width;
           }
-
-          let qualityFloor = 0.025;
-          let scaleFloor = 0.025;
-          let preferredOp: 'prefer-size' | 'prefer-quality';
-
-          // Ensure that minQuality is adhered
-          if (options?.minQuality) {
-            qualityFloor = options?.minQuality;
-            qualityFloor = (qualityFloor < 0) ? 0 : (qualityFloor > 1) ? 1 : qualityFloor;
+  
+          if (canvas.height > maxDimension) {
+            width = canvas.width = canvas.width * (maxDimension / canvas.height);
+            height = canvas.height = maxDimension;
+            resizeFactor = maxDimension / this.image.height;
           }
-
-          // Ensure that minScale is adhered
-          if (options?.minScale) {
-            scaleFloor = options?.minScale;
-            scaleFloor = (scaleFloor < 0) ? 0 : (scaleFloor > 1) ? 1 : scaleFloor;
-          }
-
-          switch (options?.mode) {
-            case 'alternating-preference':
-              if (lastOp === 'quality') {
+        }
+  
+        const ctx: CanvasRenderingContext2D | null = canvas?.getContext('2d', { desynchronized: false, willReadFrequently: true });
+  
+        ctx?.drawImage(
+          this.image,
+          0,
+          0,
+          canvas.width,
+          canvas.height,
+        );
+  
+        // if we haven't loaded anonymously, we'll taint the canvas and crash the application
+        let blob = await NgxAdvancedImgBitmap.canvasToBlobPromise(canvas, type, quality);
+  
+        // clean up the canvas
+        if (canvas) {
+          ctx?.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+          canvas.width = canvas.height = 0;
+          canvas = null;
+        }
+  
+        if (!blob) {
+          throw new Error('An error occurred while drawing to the canvas');
+        }
+  
+        if (typeof options?.sizeLimit === 'number' && !isNaN(options?.sizeLimit) && isFinite(options?.sizeLimit) && options?.sizeLimit > 0) {
+          const fileSize: number = Math.round(blob.size);
+  
+          // if (this.debug) {
+          //   console.warn('Image Optimization Factors:', options?.mode, quality, resizeFactor, `${fileSize} B`);
+          // }
+  
+          if (
+            fileSize > options?.sizeLimit &&
+            (!lastSize || (lastSize && Math.ceil(fileSize) <= Math.ceil(lastSize))) // consider rounding errors
+          ) {
+            if (resizeFactor === undefined) {
+              // if the resize factor wasn't supplied set to 1
+              resizeFactor = 1;
+            }
+  
+            if (resizeFactor <= 0) {
+              throw new Error('Invalid resize factor reached (<= 0)');
+            }
+  
+            let qualityFloor = 0.025;
+            let scaleFloor = 0.025;
+            let preferredOp: 'prefer-size' | 'prefer-quality';
+  
+            // Ensure that minQuality is adhered
+            if (options?.minQuality) {
+              qualityFloor = options?.minQuality;
+              qualityFloor = (qualityFloor < 0) ? 0 : (qualityFloor > 1) ? 1 : qualityFloor;
+            }
+  
+            // Ensure that minScale is adhered
+            if (options?.minScale) {
+              scaleFloor = options?.minScale;
+              scaleFloor = (scaleFloor < 0) ? 0 : (scaleFloor > 1) ? 1 : scaleFloor;
+            }
+  
+            switch (options?.mode) {
+              case 'alternating-preference':
+                if (lastOp === 'quality') {
+                  preferredOp = 'prefer-size';
+                  lastOp = 'scale';
+                } else {
+                  preferredOp = 'prefer-quality'
+                  lastOp = 'quality';
+                }
+                break;
+  
+              case 'retain-size':
+                scaleFloor = 1;
+  
+                preferredOp = 'prefer-quality';
+                lastOp = 'quality';
+  
+                break;
+  
+              case 'retain-quality':
+                qualityFloor = 1;
+  
                 preferredOp = 'prefer-size';
                 lastOp = 'scale';
-              } else {
-                preferredOp = 'prefer-quality'
+                break;
+  
+              case 'prefer-quality':
+                preferredOp = 'prefer-quality';
+                lastOp = 'scale';
+  
+                break;
+  
+              case 'prefer-size':
+              default:
+                preferredOp = 'prefer-size';
                 lastOp = 'quality';
-              }
-              break;
-
-            case 'retain-size':
-              scaleFloor = 1;
-
-              preferredOp = 'prefer-quality';
-              lastOp = 'quality';
-
-              break;
-
-            case 'retain-quality':
-              qualityFloor = 1;
-
-              preferredOp = 'prefer-size';
-              lastOp = 'scale';
-              break;
-
-            case 'prefer-quality':
-              preferredOp = 'prefer-quality';
-              lastOp = 'scale';
-
-              break;
-
-            case 'prefer-size':
-            default:
-              preferredOp = 'prefer-size';
-              lastOp = 'quality';
-              break;
-          }
-
-          /**
-           * perform the optimization based on the preferred operation
-           */
-
-          switch (preferredOp) {
-            case 'prefer-quality':
-              // base case if we are at our bottom quality and resize factor, resolve
-              if (!options?.strict && (quality <= qualityFloor && resizeFactor <= scaleFloor) || minThresholdReached) {
-                const exifData: any = JSON.parse(JSON.stringify(this.exifData));
-
-                exifData['ExifImageWidth'] = width;
-                exifData['ExifImageHeight'] = height;
-
-                resolve({
-                  objectURL,
-                  exifData,
-                } as INgxAdvancedImgBitmapOptimization);
-
+                break;
+            }
+  
+            /**
+             * perform the optimization based on the preferred operation
+             */
+  
+            switch (preferredOp) {
+              case 'prefer-quality':
+                // base case if we are at our bottom quality and resize factor, resolve
+                if (!options?.strict && (quality <= qualityFloor && resizeFactor <= scaleFloor) || minThresholdReached) {
+                  const exifData: any = JSON.parse(JSON.stringify(this.exifData));
+  
+                  exifData['ExifImageWidth'] = width;
+                  exifData['ExifImageHeight'] = height;
+  
+                  resolve({
+                    blob,
+                    exifData,
+                  } as INgxAdvancedImgBitmapOptimization);
+  
+                  return;
+                }
+  
+                if (resizeFactor > scaleFloor) {
+                  if (options?.sizeLimit) {
+                    const oldResizeFactor: number = resizeFactor;
+                    const newDims: { width: number, height: number } = this.estimateNewDimensions(fileSize, options?.sizeLimit, width, height);
+  
+                    if (width > height) {
+                      resizeFactor = resizeFactor - (1 - (newDims.width / width));
+                    } else {
+                      resizeFactor = resizeFactor - (1 - (newDims.height / height));
+                    }
+  
+                    if (resizeFactor > oldResizeFactor) {
+                      resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
+                    }
+                  }
+  
+                  if (resizeFactor < scaleFloor) {
+                    // keep it within a given scaling factor
+                    resizeFactor = scaleFloor;
+                  }
+  
+                  // if the quality is too high, reduce it and try again
+                  this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp, fileSize).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
+  
+                  return;
+                }
+  
+                // we've reduced scale, let's reduce image size
+                if (quality < qualityFloor) {
+                  if (options?.strict) {
+                    throw new Error('The requested image optimization cannot be achieved');
+                  }
+  
+                  // keep it within a given quality floor
+                  quality = qualityFloor;
+                }
+  
+                quality = quality - (((options?.sizeLimit ? (fileSize / options?.sizeLimit) * NgxAdvancedImgBitmap.PREDICTION_FACTOR : NgxAdvancedImgBitmap.QUALITY_FACTOR) / (options?.sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR));
+  
+                this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp, fileSize).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
+  
                 return;
-              }
-
-              if (resizeFactor > scaleFloor) {
+  
+              case 'prefer-size':
+                // base case if we are at our bottom quality and resize factor, resolve
+                if (!options?.strict && (quality <= qualityFloor && resizeFactor <= scaleFloor) || minThresholdReached) {
+                  const exifData: any = JSON.parse(JSON.stringify(this.exifData));
+  
+                  exifData['ExifImageWidth'] = width;
+                  exifData['ExifImageHeight'] = height;
+  
+                  return;
+                }
+  
+                if (quality > qualityFloor) {
+                  quality = quality - (((options?.sizeLimit ? (fileSize / options?.sizeLimit) * NgxAdvancedImgBitmap.PREDICTION_FACTOR : NgxAdvancedImgBitmap.QUALITY_FACTOR) / (options?.sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR));
+  
+                  if (quality < qualityFloor) {
+                    // keep it within a given quality floor
+                    quality = qualityFloor;
+                  }
+  
+                  // if the quality is too high, reduce it and try again
+                  this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp, fileSize).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
+  
+                  return;
+                }
+  
+                // we've reduced quality, let's reduce image size
                 if (options?.sizeLimit) {
                   const oldResizeFactor: number = resizeFactor;
                   const newDims: { width: number, height: number } = this.estimateNewDimensions(fileSize, options?.sizeLimit, width, height);
-
+  
                   if (width > height) {
                     resizeFactor = resizeFactor - (1 - (newDims.width / width));
                   } else {
                     resizeFactor = resizeFactor - (1 - (newDims.height / height));
                   }
-
+  
                   if (resizeFactor > oldResizeFactor) {
                     resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
                   }
                 }
-
+  
                 if (resizeFactor < scaleFloor) {
+                  if (options?.strict) {
+                    throw new Error('The requested image optimization cannot be achieved');
+                  }
+  
                   // keep it within a given scaling factor
                   resizeFactor = scaleFloor;
                 }
-
-                // clear any existing object urls as necessary
-                if (objectURL) {
-                  try {
-                    domURL.revokeObjectURL(objectURL);
-                  } catch (error) {
-                  }
-                }
-
-                // if the quality is too high, reduce it and try again
-                this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp, fileSize).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
-
+  
+                this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
+  
                 return;
-              }
-
-              // we've reduced scale, let's reduce image size
-              if (quality < qualityFloor) {
-                if (options?.strict) {
-                  throw new Error('The requested image optimization cannot be achieved');
-                }
-
-                // keep it within a given quality floor
-                quality = qualityFloor;
-              }
-
-              quality = quality - (((options?.sizeLimit ? (fileSize / options?.sizeLimit) * NgxAdvancedImgBitmap.PREDICTION_FACTOR : NgxAdvancedImgBitmap.QUALITY_FACTOR) / (options?.sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR));
-
-              // clear any existing object urls as necessary
-              if (objectURL) {
-                try {
-                  domURL.revokeObjectURL(objectURL);
-                } catch (error) {
-                }
-              }
-
-              this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp, fileSize).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
-
-              return;
-
-            case 'prefer-size':
-              // base case if we are at our bottom quality and resize factor, resolve
-              if (!options?.strict && (quality <= qualityFloor && resizeFactor <= scaleFloor) || minThresholdReached) {
-                const exifData: any = JSON.parse(JSON.stringify(this.exifData));
-
-                exifData['ExifImageWidth'] = width;
-                exifData['ExifImageHeight'] = height;
-
-                resolve({
-                  objectURL,
-                  exifData,
-                } as INgxAdvancedImgBitmapOptimization);
-
-                return;
-              }
-
-              if (quality > qualityFloor) {
-                quality = quality - (((options?.sizeLimit ? (fileSize / options?.sizeLimit) * NgxAdvancedImgBitmap.PREDICTION_FACTOR : NgxAdvancedImgBitmap.QUALITY_FACTOR) / (options?.sizeLimit / fileSize) * NgxAdvancedImgBitmap.ITERATION_FACTOR));
-
-                if (quality < qualityFloor) {
-                  // keep it within a given quality floor
-                  quality = qualityFloor;
-                }
-
-                // clear any existing object urls as necessary
-                if (objectURL) {
-                  try {
-                    domURL.revokeObjectURL(objectURL);
-                  } catch (error) {
-                  }
-                }
-
-                // if the quality is too high, reduce it and try again
-                this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp, fileSize).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
-
-                return;
-              }
-
-              // we've reduced quality, let's reduce image size
-              if (options?.sizeLimit) {
-                const oldResizeFactor: number = resizeFactor;
-                const newDims: { width: number, height: number } = this.estimateNewDimensions(fileSize, options?.sizeLimit, width, height);
-
-                if (width > height) {
-                  resizeFactor = resizeFactor - (1 - (newDims.width / width));
-                } else {
-                  resizeFactor = resizeFactor - (1 - (newDims.height / height));
-                }
-
-                if (resizeFactor > oldResizeFactor) {
-                  resizeFactor = resizeFactor - NgxAdvancedImgBitmap.ITERATION_FACTOR;
-                }
-              }
-
-              if (resizeFactor < scaleFloor) {
-                if (options?.strict) {
-                  throw new Error('The requested image optimization cannot be achieved');
-                }
-
-                // keep it within a given scaling factor
-                resizeFactor = scaleFloor;
-              }
-
-              // clear any existing object urls as necessary
-              if (objectURL) {
-                try {
-                  domURL.revokeObjectURL(objectURL);
-                } catch (error) {
-                }
-              }
-
-              this._optimize(type, quality, resizeFactor, maxDimension, options, lastOp).then((optimization: INgxAdvancedImgBitmapOptimization) => resolve(optimization));
-
-              return;
+            }
           }
         }
+  
+        const exifData: any = JSON.parse(JSON.stringify(this.exifData));
+  
+        exifData['ExifImageWidth'] = width;
+        exifData['ExifImageHeight'] = height;
+  
+        resolve({
+          blob,
+          exifData,
+        } as INgxAdvancedImgBitmapOptimization);
+      } catch (error) {
+        reject(error);
       }
-
-      const exifData: any = JSON.parse(JSON.stringify(this.exifData));
-
-      exifData['ExifImageWidth'] = width;
-      exifData['ExifImageHeight'] = height;
-
-      resolve({
-        objectURL,
-        exifData,
-      } as INgxAdvancedImgBitmapOptimization);
+      
     });
   }
 
@@ -1259,7 +1220,7 @@ export class NgxAdvancedImgBitmap {
    * Helper function that adjusts the image based on any exif data indicating
    * a different orientation be performed.
    */
-  private async adjustForExifOrientation(): Promise<void> {
+  protected async adjustForExifOrientation(): Promise<void> {
     if (!this.image) {
       return Promise.reject(new Error('Image not loaded'));
     }
@@ -1282,7 +1243,7 @@ export class NgxAdvancedImgBitmap {
   /**
    * Event handler for when expiration clocks are complete and we must dispose of ourselves.
    */
-  private onExpired(): void {
+  protected onExpired(): void {
     // only destroy if we had been loaded, otherwise let the loading pathways dispose of this bitmap
     if (this.loaded) {
       this.destroy();
@@ -1291,27 +1252,4 @@ export class NgxAdvancedImgBitmap {
     // the expiration clock is now complete
     this.expirationClock = null;
   }
-
-  /**
-   * Fetch the blob info for a given url.
-   *
-   * @param url The url to the image to load the blob data.
-   */
-  private async getImageBlob(url: string): Promise<Blob> {
-    if (!this.image) {
-      return Promise.reject(new Error('Image not loaded'));
-    }
-
-    const headers: Headers = new Headers();
-    headers.set('Access-Control-Allow-Origin', '*');
-
-    const response: Response = await fetch(url, {
-      method: 'GET',
-      mode: this.image.crossOrigin !== 'anonymous' ? 'no-cors' : undefined,
-      headers,
-    });
-
-    return response.blob();
-  }
-
 }

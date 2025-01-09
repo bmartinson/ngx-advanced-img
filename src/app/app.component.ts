@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { INgxAdvancedImgBitmapOptimization, INgxAdvancedImgBitmapInfo, NgxAdvancedImgBitmap } from '../../projects/ngx-advanced-img/src/public-api';
+import { INgxAdvancedImgBitmapOptimization, INgxAdvancedImgBitmapInfo, NgxAdvancedImgBitmap, INgxAdvancedImgHeicConversion } from '../../projects/ngx-advanced-img/src/public-api';
 
 @Component({
   selector: 'ngx-advanced-img-lib-app-root',
@@ -16,6 +16,7 @@ export class AppComponent {
   public strictMode: boolean = false;
   public retainMimeType: boolean = false;
   public mode: 'retain-size' | 'retain-quality' | 'prefer-size' | 'prefer-quality' | 'alternating-preference' = 'prefer-size';
+  private worker: Worker | null = null;
 
   public constructor() {
   }
@@ -94,18 +95,29 @@ export class AppComponent {
 
     // if not retaining mime type, let's use webp by default
     let defaultMimeType = "image/webp";
+    let supportsWebp = NgxAdvancedImgBitmap.isMimeTypeSupported('image/webp');
 
-    if (!this.retainMimeType && !NgxAdvancedImgBitmap.isMimeTypeSupported('image/webp')) {
+    if (!this.retainMimeType && !supportsWebp) {
       this.prettyLog(['image/webp output is not supported by your browser....using image/jpeg instead.'], 'error');
 
       // switch to use jpeg for fast optimization
       defaultMimeType = "image/jpeg";
     }
 
-    this.imageFiles.forEach((file: File) => {
+    this.imageFiles.forEach(async (file: File) => {
       if (file) {
+        // convert heic to jpeg
+        let src: Blob = file;
+        if (file.type === 'image/heic') {
+          const result = await this.workerConvert(
+            file,
+            this.retainMimeType ? 'image/jpeg' : defaultMimeType
+          );
+
+          src = result.blob;
+        }
         // Implement image processing logic here
-        const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(file, '', 0, 0);
+        const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(src, '', 0, 0);
         bitmap.debug = true;
 
         NgxAdvancedImgBitmap.getImageDataFromBlob(file as Blob).then((unOptimizedData: INgxAdvancedImgBitmapInfo) => {
@@ -145,10 +157,10 @@ export class AppComponent {
                 performance.measure('Image Optimization', 'optimization_start', 'optimization_end');
 
                 // auto save this for the user
-                this.prettyLog(['[TEST] Saving URL:', data.objectURL, data.exifData, unOptimizedData.exifData]);
+                this.prettyLog(['[TEST] Saving URL:', data.blob, data.exifData, unOptimizedData.exifData]);
 
                 performance.mark('save_start');
-                bitmap.saveFile(`test_output_${AppComponent.getFileNameWithoutExtension(file)} _q - ${this.quality} _m - ${this.mode} _s - ${this.size} `, data.objectURL, mimeType);
+                bitmap.saveFile(`test_output_${AppComponent.getFileNameWithoutExtension(file)} _q - ${this.quality} _m - ${this.mode} _s - ${this.size} `, data.blob, mimeType);
                 performance.mark('save_end');
                 performance.measure('Image Saving', 'save_start', 'save_end');
 
@@ -164,8 +176,6 @@ export class AppComponent {
                 performance.clearMarks();
                 performance.clearMeasures();
 
-                URL.revokeObjectURL(data.objectURL);
-
                 // clean up the bitmap
                 bitmap.destroy();
               }); // let the errors bubble up
@@ -179,5 +189,38 @@ export class AppComponent {
       }
     });
   }
+
+  private workerConvert(file: File, mimeType: string): Promise<INgxAdvancedImgHeicConversion> {
+		return new Promise((resolve, reject) => {
+			const id = (Math.random() * new Date().getTime()).toString();
+			const message = { id, file, mimeType };
+			console.log('sending message to worker', import.meta.url);
+			const worker = new Worker(new URL('./app.worker', import.meta.url), { type: `module` });
+			worker.postMessage(message);
+			
+      const listener = (message: MessageEvent) => {
+				worker.removeEventListener("message", listener);
+
+				// destroy worker
+        worker.terminate();
+
+				if (message.data.error) {
+					reject(message.data.error);
+        } else {
+          resolve(message.data);
+        }
+			};
+			
+      worker.addEventListener("message", listener);
+
+			worker.onerror = (error) => {
+				console.log(`Worker error: ${error}`);
+
+        worker.terminate();
+
+				reject(error);
+			};
+		});
+	}
 
 }
