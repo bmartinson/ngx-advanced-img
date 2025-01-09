@@ -15,7 +15,7 @@ export class NgxAdvancedImgHeicConverter {
    * @param image DecodeResult object from libheif-js
    * @returns Promise resolving to an ImageData object
    */
-	private static processSingleImage(image: libheif.DecodeResult): Promise<ImageData> {
+	public static processSingleImage(image: libheif.DecodeResult): Promise<ImageData> {
 		return new Promise((resolve, reject) => {
 			const w = image.get_width();
 			const h = image.get_height();
@@ -45,7 +45,7 @@ export class NgxAdvancedImgHeicConverter {
    * @param quality The quality of the resulting conversion
    * @returns 
    */
-  protected static imageDataToBlobOffscreen(imageData: ImageData, mimeType: string, quality: number): Promise<Blob> {
+  public static imageDataToBlobOffscreen(imageData: ImageData, mimeType: string, quality: number): Promise<Blob> {
     return new Promise((resolve, reject) => {
       // Create an offscreen canvas
       let offscreenCanvas = new OffscreenCanvas(imageData.width, imageData.height);
@@ -67,7 +67,7 @@ export class NgxAdvancedImgHeicConverter {
    * @param buffer 
    * @returns ImageData object containg raw pixel data
    */
-	protected static async decodeHeic(buffer: Uint8Array): Promise<ImageData> {
+	public static async decodeHeic(buffer: Uint8Array): Promise<ImageData> {
 		const decoder = new libheif.HeifDecoder();
 		let imagesArr = decoder.decode(buffer);
 		

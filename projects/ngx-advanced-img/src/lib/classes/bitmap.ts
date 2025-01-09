@@ -4,9 +4,9 @@ import { Observable, Subject } from 'rxjs';
 
 import Timeout = NodeJS.Timeout;
 import { NgxAdvancedImgJxon } from './jxon';
-//const libheif = require('libheif-js/wasm-bundle');
 // @ts-ignore
 import libheif from 'libheif-js/wasm-bundle';
+import { NgxAdvancedImgHeicConverter } from './heic-converter';
 
 export type NgxAdvancedImgResolution = string | '';
 
@@ -55,16 +55,16 @@ export class NgxAdvancedImgBitmap {
   public image: HTMLImageElement | undefined;
   public size: number;
   public debug: boolean; // set to true for console logging
-  protected _ttl: number;	// time to live in seconds after it has been loaded
-  protected loadedAt: Date | null;
-  protected expirationClock: Timeout | null;
-  protected _destroyed: Subject<INgxAdvancedImgBitmapDataSignature> | undefined;
-  protected _objectURL: string;
-  protected _exifData: any;
-  protected _mimeType: string;
-  protected _orientation: number;
-  protected _fileSize: number;
-  protected _initialFileSize: number;
+  private _ttl: number;	// time to live in seconds after it has been loaded
+  private loadedAt: Date | null;
+  private expirationClock: Timeout | null;
+  private _destroyed: Subject<INgxAdvancedImgBitmapDataSignature> | undefined;
+  private _objectURL: string;
+  private _exifData: any;
+  private _mimeType: string;
+  private _orientation: number;
+  private _fileSize: number;
+  private _initialFileSize: number;
 
   /**
    * The object URL format of the image that can be used for direct downloading to an end-user's machine.
@@ -355,82 +355,49 @@ export class NgxAdvancedImgBitmap {
     return false;
   }
 
+    /**
+   * Converts a ImageData object to a Blob
+   * @param imageData Pixel data to convert to a Blob
+   * @param mimeType The mimetype of the resulting blob
+   * @param quality The quality of the resulting conversion
+   * @returns 
+   */
+    private static imageDataToBlob(imageData: ImageData, mimeType: string, quality: number): Promise<Blob> {
+      return new Promise((resolve, reject) => {
+        let canvas = document.createElement('canvas');
+        canvas.width = imageData.width;
+        canvas.height = imageData.height;
+        let ctx = canvas.getContext('2d');
+        if (!ctx) {
+          throw new Error('Could not get 2d context');
+        }
+    
+        ctx.putImageData(imageData, 0, 0);
+  
+        canvas.toBlob((blob: Blob | null) => {
+          if (!blob) {
+            return reject("ERR_CANVAS Error on converting imagedata to blob: Could not get blob from canvas");
+          }
+  
+          return resolve(blob);
+        }, mimeType, quality);
+      });
+    }
+
+  /*
+   * Helper function to get the image data from a canvas
+   */
   private static canvasToBlobPromise(canvas: HTMLCanvasElement, mimeType = 'image/png', quality = 1.0): Promise<Blob | null> {
     return new Promise((resolve, reject) => {
       canvas.toBlob((blob) => {
-        resolve(blob);
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error('Failed to convert canvas to blob'));
+        }
       }, mimeType, quality);
     });
   }
-
-  protected static imageDataToBlob(imageData: ImageData, mimeType: string, quality: number): Promise<Blob> {
-    return new Promise((resolve, reject) => {
-      let canvas = document.createElement('canvas');
-      canvas.width = imageData.width;
-      canvas.height = imageData.height;
-      let ctx = canvas.getContext('2d');
-      if (!ctx) {
-        throw new Error('Could not get 2d context');
-      }
-  
-      ctx.putImageData(imageData, 0, 0);
-
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          return reject("ERR_CANVAS Error on converting imagedata to blob: Could not get blob from canvas");
-        }
-
-        return resolve(blob);
-      }, mimeType, quality);
-    });
-  }
-
-  private static processSingleImage(image: any): Promise<ImageData> {
-    return new Promise((resolve, reject) => {
-      const w = image.get_width();
-      const h = image.get_height();
-      const whiteImage = new ImageData(w, h);
-      for (let i = 0; i < w * h; i++) {
-        whiteImage.data[i * 4 + 3] = 255;
-      }
-      image.display(whiteImage, (imageData: ImageData | null) => {
-        if (!imageData) {
-          return reject(
-            "ERR_LIBHEIF Error while processing single image and generating image data, could not ensure image"
-          );
-        }
-        resolve(imageData);
-      });
-    });
-  }
-
-  protected static async decodeHeic(buffer: Uint8Array): Promise<ImageData> {
-      const decoder = new libheif.HeifDecoder();
-      let imagesArr = decoder.decode(buffer);
-      if (!imagesArr || !imagesArr.length) {
-        throw "ERR_LIBHEIF format not supported";
-      }
-      imagesArr = imagesArr.filter((x: any) => {
-        let valid = true;
-        try {
-          /*
-          sometimes the heic container is valid
-          yet the images themselves are corrupt
-          */
-          x.get_height();
-        } catch (e) {
-          valid = false;
-        }
-        return valid;
-      });
-      if (!imagesArr.length) {
-        throw "ERR_LIBHEIF Heic doesn't contain valid images";
-      }
-  
-      // use the first frame if heic contains multiple images
-      return NgxAdvancedImgBitmap.processSingleImage(imagesArr[0]);
-  }
-  
 
   /**
    * Destroys the current asset bitmap object and frees all memory in use.
@@ -536,8 +503,8 @@ export class NgxAdvancedImgBitmap {
 
         // convert heic to jpeg if needed
         if (this._mimeType === 'image/heic') {
-          console.log("Converting HEIC to JPEG");
-          const imageData = await NgxAdvancedImgBitmap.decodeHeic(buffer);
+          console.log("Converting HEIC to JPEG without worker");
+          const imageData = await NgxAdvancedImgHeicConverter.decodeHeic(buffer);
           
           // preserve quality settings used in heic2any
           this.src = await NgxAdvancedImgBitmap.imageDataToBlob(imageData, 'image/jpeg', .92) as Blob;

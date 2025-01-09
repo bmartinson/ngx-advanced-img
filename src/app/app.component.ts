@@ -111,7 +111,7 @@ export class AppComponent {
         if (file.type === 'image/heic') {
           const result = await this.workerConvert(
             file,
-            supportsWebp ? 'image/webp' : 'image/jpeg'
+            this.retainMimeType ? 'image/jpeg' : defaultMimeType
           );
 
           src = result.blob;
