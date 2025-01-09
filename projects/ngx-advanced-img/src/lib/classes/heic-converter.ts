@@ -1,5 +1,4 @@
 import * as exif from 'exifr';
-
 // @ts-ignore
 import libheif from 'libheif-js/wasm-bundle';
 
@@ -16,7 +15,7 @@ export class NgxAdvancedImgHeicConverter {
    * @param image DecodeResult object from libheif-js
    * @returns Promise resolving to an ImageData object
    */
-	private static processSingleImage(image: any): Promise<ImageData> {
+	private static processSingleImage(image: libheif.DecodeResult): Promise<ImageData> {
 		return new Promise((resolve, reject) => {
 			const w = image.get_width();
 			const h = image.get_height();
