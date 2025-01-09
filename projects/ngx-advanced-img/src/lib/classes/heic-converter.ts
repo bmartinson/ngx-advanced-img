@@ -10,6 +10,12 @@ export interface INgxAdvancedImgHeicConversion {
 
 export class NgxAdvancedImgHeicConverter {
 
+  /**
+   * Converts the result of a libheif-js HEIC decoding into an ImageData object.
+   * Based on a helper function used in the heic2any library.
+   * @param image DecodeResult object from libheif-js
+   * @returns Promise resolving to an ImageData object
+   */
 	private static processSingleImage(image: any): Promise<ImageData> {
 		return new Promise((resolve, reject) => {
 			const w = image.get_width();
@@ -32,23 +38,36 @@ export class NgxAdvancedImgHeicConverter {
 		});
 	}
 
+  /**
+   * Converts a ImageData object to a Blob using an OffscreenCanvas.
+   * OffscreenCanvas is used so that this function can be called in a Web Worker.
+   * @param imageData Pixel data to convert to a Blob
+   * @param mimeType The mimetype of the resulting blob
+   * @param quality The quality of the resulting conversion
+   * @returns 
+   */
   protected static imageDataToBlobOffscreen(imageData: ImageData, mimeType: string, quality: number): Promise<Blob> {
     return new Promise((resolve, reject) => {
       // Create an offscreen canvas
       let offscreenCanvas = new OffscreenCanvas(imageData.width, imageData.height);
       let ctx = offscreenCanvas.getContext('2d');
       if (!ctx) {
-        throw new Error('Could not get 2d context');
+        return reject(new Error('Could not get 2d context'));
       }
   
       ctx.putImageData(imageData, 0, 0);
 
       offscreenCanvas.convertToBlob({ type: mimeType, quality: quality }).then(resolve).catch((error) => {
-        reject("ERR_CANVAS Error on converting imagedata to blob: " + error);
+        reject(new Error("ERR_CANVAS Error on converting imagedata to blob: " + error));
       });
     });
   }
 
+  /**
+   * 
+   * @param buffer 
+   * @returns 
+   */
 	protected static async decodeHeic(buffer: Uint8Array): Promise<ImageData> {
 		const decoder = new libheif.HeifDecoder();
 		let imagesArr = decoder.decode(buffer);
@@ -80,7 +99,12 @@ export class NgxAdvancedImgHeicConverter {
 		return NgxAdvancedImgHeicConverter.processSingleImage(imagesArr[0]);
 	}
 
-
+  /**
+   * Converts a Blob containing HEIC data to a Blob containing JPEG data
+   * using the libheif-js WebAssembly bundle.
+   * @param src 
+   * @returns 
+   */
 	public static async convert(src: Blob): Promise<INgxAdvancedImgHeicConversion> {
 		// if no valid source, then reject the load
 		if (!src) {
@@ -88,12 +112,11 @@ export class NgxAdvancedImgHeicConverter {
 		}
 		
 		return new Promise((resolve, reject) => {
-      // begin parsing exif data
+      // begin parsing of exif data before loss during conversion
       const exifPromise = exif.parse(src, true);
 
 			const fileReader: FileReader = new FileReader();
 
-			// when the file reader successfully loads array buffers, process them
 			fileReader.onload = async (event: Event) => {
         const buffer: Uint8Array = new Uint8Array((event.target as any).result);
 
@@ -103,11 +126,9 @@ export class NgxAdvancedImgHeicConverter {
 
         const exifData = await exifPromise;
 
-        console.log(exifData);
-
         resolve({
           exifData,
-          blob: blob
+          blob
         });
 			};
 

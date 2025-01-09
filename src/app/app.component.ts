@@ -105,9 +105,15 @@ export class AppComponent {
 
     this.imageFiles.forEach(async (file: File) => {
       if (file) {
-        const result = await this.workerConvert(file);
+        // convert heic to jpeg
+        let src: Blob = file;
+        if (file.type === 'image/heic') {
+          const result = await this.workerConvert(file);
+
+          src = result.blob;
+        }
         // Implement image processing logic here
-        const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(result.blob, '', 0, 0);
+        const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(src, '', 0, 0);
         bitmap.debug = true;
 
         NgxAdvancedImgBitmap.getImageDataFromBlob(file as Blob).then((unOptimizedData: INgxAdvancedImgBitmapInfo) => {
@@ -192,26 +198,26 @@ export class AppComponent {
 			worker.postMessage(message);
 			
       const listener = (message: MessageEvent) => {
-				//if (message.data.id === id) {
 				worker.removeEventListener("message", listener);
 
 				// destroy worker
         worker.terminate();
 
-				if (message.data.error)
+				if (message.data.error) {
 					reject(message.data.error);
-				else
-					resolve(message.data);
-				//}
+        } else {
+          resolve(message.data);
+        }
 			};
-			worker.addEventListener("message", listener);
+			
+      worker.addEventListener("message", listener);
 
 			worker.onerror = (error) => {
 				console.log(`Worker error: ${error}`);
 
         worker.terminate();
 
-				throw error;
+				reject(error);
 			};
 		});
 	}

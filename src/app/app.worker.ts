@@ -4,13 +4,9 @@ import { NgxAdvancedImgHeicConverter } from "../../projects/ngx-advanced-img/src
 
 
 addEventListener('message', async ({ data }) => {
-  const response = `worker response to ${data}`;
-
   const file = data.file as File;
 
   const result = await NgxAdvancedImgHeicConverter.convert(file);
-
-  console.log(result);
 
   postMessage(result);
 });
