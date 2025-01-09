@@ -63,9 +63,9 @@ export class NgxAdvancedImgHeicConverter {
   }
 
   /**
-   * 
+   * Decodes a buffer containing HEIC data into an ImageData object using the libheif-js WebAssembly bundle.
    * @param buffer 
-   * @returns 
+   * @returns ImageData object containg raw pixel data
    */
 	protected static async decodeHeic(buffer: Uint8Array): Promise<ImageData> {
 		const decoder = new libheif.HeifDecoder();
@@ -75,7 +75,7 @@ export class NgxAdvancedImgHeicConverter {
 			throw "ERR_LIBHEIF format not supported";
 		}
 
-		imagesArr = imagesArr.filter((x: any) => {
+		imagesArr = imagesArr.filter((x: libheif.DecodeResult) => {
 			let valid = true;
 			try {
         /*
