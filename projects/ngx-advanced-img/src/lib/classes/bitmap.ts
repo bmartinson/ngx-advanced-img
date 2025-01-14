@@ -503,13 +503,17 @@ export class NgxAdvancedImgBitmap {
 
         // convert heic to jpeg if needed
         if (this._mimeType === 'image/heic') {
-          console.log("Converting HEIC to JPEG without worker");
-          const imageData = await NgxAdvancedImgHeicConverter.decodeHeic(buffer);
+          console.log("Converting HEIC to JPEG without web worker");
+          try {
+            const imageData = await NgxAdvancedImgHeicConverter.decodeHeic(buffer);
           
-          // preserve quality settings used in heic2any
-          this.src = await NgxAdvancedImgBitmap.imageDataToBlob(imageData, 'image/jpeg', .92) as Blob;
-          
-          this._mimeType = this.src.type;
+            // preserve quality settings used in heic2any
+            this.src = await NgxAdvancedImgBitmap.imageDataToBlob(imageData, 'image/jpeg', .92) as Blob;
+            
+            this._mimeType = this.src.type;
+          } catch (e) {
+            console.error("Unable to convert HEIC to JPEG within bitmap.ts", e);
+          }
         }
 
         // wait for image load

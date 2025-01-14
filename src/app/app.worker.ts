@@ -7,7 +7,19 @@ addEventListener('message', async ({ data }) => {
   const file = data.file as File;
   const mimeType = data.mimeType as string;
 
-  const result = await NgxAdvancedImgHeicConverter.convert(file, mimeType);
+  try {
+    const result = await NgxAdvancedImgHeicConverter.convert(file, mimeType);
 
-  postMessage(result);
+    postMessage(result);
+  } catch (error) {
+    console.error("Worker error:", error instanceof Error ? error.stack : error);
+
+    // Return the original error if it is an Error object, otherwise create a new one
+    const errorMessage = error instanceof Error 
+        ? error 
+        : new Error(`Worker error: ${JSON.stringify(error)}`);
+
+    postMessage(errorMessage);
+  }
+
 });
