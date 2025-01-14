@@ -65,6 +65,7 @@ export class NgxAdvancedImgBitmap {
   private _orientation: number;
   private _fileSize: number;
   private _initialFileSize: number;
+  private _canvas: HTMLCanvasElement | null;
 
   /**
    * The object URL format of the image that can be used for direct downloading to an end-user's machine.
@@ -202,6 +203,18 @@ export class NgxAdvancedImgBitmap {
       default:
         return 0;
     }
+  }
+
+  public get canvas(): HTMLCanvasElement {
+    if (!this._canvas) {
+      this._canvas = document.createElement('canvas');
+    }
+
+    return this._canvas;
+  }
+
+  public set canvas(value: HTMLCanvasElement | null) {
+    this._canvas = value;
   }
 
   public constructor(
@@ -362,9 +375,8 @@ export class NgxAdvancedImgBitmap {
    * @param quality The quality of the resulting conversion
    * @returns 
    */
-    private static imageDataToBlob(imageData: ImageData, mimeType: string, quality: number): Promise<Blob> {
+    private static imageDataToBlob(imageData: ImageData, mimeType: string, quality: number, canvas: HTMLCanvasElement): Promise<Blob> {
       return new Promise((resolve, reject) => {
-        let canvas = document.createElement('canvas');
         canvas.width = imageData.width;
         canvas.height = imageData.height;
         let ctx = canvas.getContext('2d');
@@ -402,7 +414,7 @@ export class NgxAdvancedImgBitmap {
   /**
    * Destroys the current asset bitmap object and frees all memory in use.
    */
-  public destroy(): void {
+  public destroy(preserveCanvas: boolean = false): void {
     // announce the disposal of this
     this._destroyed?.next({
       src: this.src,
@@ -432,6 +444,10 @@ export class NgxAdvancedImgBitmap {
         domURL?.revokeObjectURL(this._objectURL);
       } catch (error) {
       }
+    }
+
+    if (!preserveCanvas) {
+      
     }
   }
 
@@ -536,14 +552,13 @@ export class NgxAdvancedImgBitmap {
             }
 
             // create a canvas to paint to
-            let canvas: HTMLCanvasElement | null = document.createElement('canvas');
 
             // configure the dimensions of the canvas
-            canvas.width = this.image.width;
-            canvas.height = this.image.height;
+            this.canvas.width = this.image.width;
+            this.canvas.height = this.image.height;
 
             // acquire the rendering context
-            const ctx: CanvasRenderingContext2D | null = canvas?.getContext('2d', { desynchronized: false, willReadFrequently: true });
+            const ctx: CanvasRenderingContext2D | null = this.canvas?.getContext('2d', { desynchronized: false, willReadFrequently: true });
 
             // if the context cannot be acquired, we should quit the operation
             if (!ctx) {
@@ -583,10 +598,10 @@ export class NgxAdvancedImgBitmap {
             }
 
             // clean up the canvas
-            if (canvas) {
+            if (this.canvas) {
               ctx?.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-              canvas.width = canvas.height = 0;
-              canvas = null;
+              this.canvas.width = this.canvas.height = 0;
+              this.canvas = null;
             }
 
             this.loaded = true;
@@ -811,6 +826,16 @@ export class NgxAdvancedImgBitmap {
     // clean up the download operation
     domURL.revokeObjectURL(url);
     document.body.removeChild(link);
+  }
+
+  public reset(): void {
+    this.destroy();
+    this._exifData = {};
+    this._mimeType = 'unknown';
+    this._orientation = 1;
+    this._fileSize = 0;
+    this._initialFileSize = 0;
+    this._objectURL = '';
   }
 
   /**
