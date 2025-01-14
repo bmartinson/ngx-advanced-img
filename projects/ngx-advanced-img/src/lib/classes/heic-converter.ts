@@ -17,23 +17,27 @@ export class NgxAdvancedImgHeicConverter {
    */
 	public static processSingleImage(image: libheif.DecodeResult): Promise<ImageData> {
 		return new Promise((resolve, reject) => {
-			const w = image.get_width();
-			const h = image.get_height();
-			const whiteImage = new ImageData(w, h);
-			
-      for (let i = 0; i < w * h; i++) {
-				whiteImage.data[i * 4 + 3] = 255;
-			}
-			
-      image.display(whiteImage, (imageData: ImageData | null) => {
-			  if (!imageData) {
-				  return reject(
-					  "ERR_LIBHEIF Error while processing single image and generating image data, could not ensure image"
-				  );
-			  }
-
-				resolve(imageData);
-			});
+      try {
+        const w = image.get_width();
+        const h = image.get_height();
+        const whiteImage = new ImageData(w, h);
+        
+        for (let i = 0; i < w * h; i++) {
+          whiteImage.data[i * 4 + 3] = 255;
+        }
+        
+        image.display(whiteImage, (imageData: ImageData | null) => {
+          if (!imageData) {
+            return reject(
+              new Error('ERR_LIBHEIF Error while processing single image and generating image data, could not ensure image')
+            );
+          }
+  
+          resolve(imageData);
+        });
+      } catch (error) {
+        reject(new Error(`ERR_LIBHEIF: Unexpected error occurred - ${error instanceof Error ? error.message : error}`));
+      }
 		});
 	}
 
@@ -47,18 +51,22 @@ export class NgxAdvancedImgHeicConverter {
    */
   public static imageDataToBlobOffscreen(imageData: ImageData, mimeType: string, quality: number): Promise<Blob> {
     return new Promise((resolve, reject) => {
-      // Create an offscreen canvas
-      let offscreenCanvas = new OffscreenCanvas(imageData.width, imageData.height);
-      let ctx = offscreenCanvas.getContext('2d');
-      if (!ctx) {
-        return reject(new Error('Could not get 2d context'));
-      }
-  
-      ctx.putImageData(imageData, 0, 0);
+      try {
+        // Create an offscreen canvas
+        let offscreenCanvas = new OffscreenCanvas(imageData.width, imageData.height);
+        let ctx = offscreenCanvas.getContext('2d');
+        if (!ctx) {
+          return reject(new Error('Could not get 2d context'));
+        }
 
-      offscreenCanvas.convertToBlob({ type: mimeType, quality: quality }).then(resolve).catch((error) => {
-        reject(new Error("ERR_CANVAS Error on converting imagedata to blob: " + error));
-      });
+        ctx.putImageData(imageData, 0, 0);
+
+        offscreenCanvas.convertToBlob({ type: mimeType, quality: quality }).then(resolve).catch((error) => {
+          reject(new Error("ERR_CANVAS Error on converting imagedata to blob: " + error));
+        });
+      } catch (error) {
+        reject(new Error(`ERR_LIBHEIF: Unexpected error occurred - ${error instanceof Error ? error.message : error}`));
+      }
     });
   }
 
@@ -72,7 +80,7 @@ export class NgxAdvancedImgHeicConverter {
 		let imagesArr = decoder.decode(buffer);
 		
     if (!imagesArr || !imagesArr.length) {
-			throw "ERR_LIBHEIF format not supported";
+			return Promise.reject(new Error("ERR_LIBHEIF format not supported"));
 		}
 
 		imagesArr = imagesArr.filter((x: libheif.DecodeResult) => {
@@ -91,7 +99,7 @@ export class NgxAdvancedImgHeicConverter {
 		});
 
 		if (!imagesArr.length) {
-			throw "ERR_LIBHEIF Heic doesn't contain valid images";
+			return Promise.reject(new Error("ERR_LIBHEIF Heic doesn't contain valid images"));
 		}
 	
 		// use the first frame if heic contains multiple images
@@ -117,18 +125,26 @@ export class NgxAdvancedImgHeicConverter {
 			const fileReader: FileReader = new FileReader();
 
 			fileReader.onload = async (event: Event) => {
-        const buffer: Uint8Array = new Uint8Array((event.target as any).result);
+        try {
+          const buffer: Uint8Array = new Uint8Array((event.target as any).result);
 
-        const imageData = await NgxAdvancedImgHeicConverter.decodeHeic(buffer);
-        
-        const blob = await NgxAdvancedImgHeicConverter.imageDataToBlobOffscreen(imageData, mimeType, .92);
-
-        const exifData = await exifPromise;
-
-        resolve({
-          exifData,
-          blob
-        });
+          const imageData = await NgxAdvancedImgHeicConverter.decodeHeic(buffer);
+          
+          const blob = await NgxAdvancedImgHeicConverter.imageDataToBlobOffscreen(imageData, mimeType, .92);
+  
+          const exifData = await exifPromise;
+  
+          resolve({
+            exifData,
+            blob
+          });
+        } catch (error) {
+          if (error instanceof Error) {
+            reject(error); // Return the original error directly
+          } else {
+            reject(new Error(`Failed to convert HEIC to ${mimeType}. Original error: ${JSON.stringify(error)}`));
+          }
+        }
 			};
 
 			// if we fail to load the file header data, throw an error to be captured by the promise catch

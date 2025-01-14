@@ -108,12 +108,17 @@ export class AppComponent {
         // convert heic to jpeg
         let src: Blob = file;
         if (file.type === 'image/heic') {
-          const result = await this.workerConvert(
-            file,
-            this.retainMimeType ? 'image/jpeg' : defaultMimeType
-          );
-
-          src = result.blob;
+          try {
+            const result = await this.workerConvert(
+              file,
+              this.retainMimeType ? 'image/jpeg' : defaultMimeType
+            );
+  
+            src = result.blob;
+          } catch (error) {
+            this.prettyLog(['Unable to convert HEIC with web worker'], 'error');
+          }
+          
         }
         // Implement image processing logic here
         const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(src, '', 0, 0);
@@ -203,8 +208,8 @@ export class AppComponent {
 				// destroy worker
         worker.terminate();
 
-				if (message.data.error) {
-					reject(message.data.error);
+				if (message.data instanceof Error) {
+					reject(message.data);
         } else {
           resolve(message.data);
         }
