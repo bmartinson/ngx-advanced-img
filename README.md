@@ -9,12 +9,14 @@ Angular attribute directives suite that provides various HTML img feature extens
   - [About This Package](#about-this-package)
   - [Installation](#installation)
   - [Usage](#usage)
+    - [Features](#features)
+    - [Styling](#styling)
   - [Directives](#directives)
     - [ngxAdvancedImgFallback](#ngxadvancedimgfallback)
 - [Classes](#classes)
   - [NgxAdvancedImgBitmap](#ngxadvancedimgbitmap)
-    - [Creating Bitmap](#creating-bitmap)
-    - [Optimizing Bitmaps](#optimizing-bitmaps)
+      - [Creating Bitmap](#creating-bitmap)
+      - [Optimizing Bitmaps](#optimizing-bitmaps)
 
 ## About This Package
 
@@ -26,22 +28,39 @@ This package was built to provide easy to use feature directives that are meant 
 
 ## Usage
 
-1. Import `NgxAdvancedImgModule` in your app module (or other Angular module) and place it in your imports section:
+### Features
+If you use Angular modules and would like to use the directive or another feature, import it into your module.
 
    ```typescript
-   import { NgxAdvancedImgModule } from "ngx-advanced-img";
+   import { NgxAdvancedImgFallbackDirective } from "ngx-advanced-img";
 
    @NgModule({
       imports: [
         ...,
-        NgxAdvancedImgModule,
+        NgxAdvancedImgDirective,
       ],
       ...
    })
    export class AppModule { }
    ```
 
-2. Import `ngx-advanced-img.scss` to your application's styles or add it to your `angular.json` if you use the CLI tools.
+  Better yet, just use the directive or other feature directly where relevant.
+
+   ```typescript
+   import { NgxAdvancedImgFallbackDirective } from "ngx-advanced-img";
+
+   @Component({
+      selector: 'your-selector-name',
+      templateUrl: './your-component.component.html',
+      styleUrls: ['./your-component.component.scss'],
+      imports: [NgxAdvancedImgFallbackDirective],
+    })
+    export class AppComponent { }
+   ```
+
+### Styling
+
+Import `ngx-advanced-img.scss` to your application's styles or add it to your `angular.json` if you use the CLI tools.
 
 ## Directives
 
