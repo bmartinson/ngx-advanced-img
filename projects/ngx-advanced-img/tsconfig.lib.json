@@ -10,12 +10,7 @@
     "typeRoots": [
       "src/lib/types/libheif.d.ts"
     ],
-    "lib": [
-      "dom",
-      "es2018"
-    ]
+    "lib": ["dom", "es2018"]
   },
-  "exclude": [
-    "**/*.spec.ts"
-  ]
+  "exclude": ["**/*.spec.ts"]
 }

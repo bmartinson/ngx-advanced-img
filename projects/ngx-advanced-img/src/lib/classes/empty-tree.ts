@@ -1,5 +1,4 @@
 export class NgxAdvancedImgEmptyTree {
-
   public toString(): string {
     return 'null';
   }
@@ -7,5 +6,4 @@ export class NgxAdvancedImgEmptyTree {
   public valueOf(): null {
     return null;
   }
-
 }

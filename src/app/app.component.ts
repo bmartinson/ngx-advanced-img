@@ -1,14 +1,13 @@
 import { Component } from '@angular/core';
+
 import { INgxAdvancedImgBitmapOptimization, INgxAdvancedImgBitmapInfo, NgxAdvancedImgBitmap, INgxAdvancedImgHeicConversion } from '../../projects/ngx-advanced-img/src/public-api';
 
 @Component({
-    selector: 'ngx-advanced-img-lib-app-root',
-    templateUrl: './app.component.html',
-    styleUrls: ['./app.component.scss'],
-    standalone: false
+  selector: 'ngx-advanced-img-lib-app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.scss'],
 })
 export class AppComponent {
-
   public imageFiles: File[] | null = null;
   public scale = 100;
   public quality = 1;
@@ -56,7 +55,12 @@ export class AppComponent {
   }
 
   public onModeChange(event: Event): void {
-    this.mode = (event?.target as HTMLInputElement)?.value as 'retain-size' | 'retain-quality' | 'prefer-size' | 'prefer-quality' | 'alternating-preference';
+    this.mode = (event?.target as HTMLInputElement)?.value as
+      | 'retain-size'
+      | 'retain-quality'
+      | 'prefer-size'
+      | 'prefer-quality'
+      | 'alternating-preference';
   }
 
   public prettyLog(message: (string | number | boolean | Event)[], level?: 'log' | 'warn' | 'error' | undefined): void {
@@ -100,7 +104,7 @@ export class AppComponent {
       this.prettyLog(['image/webp output is not supported by your browser....using image/jpeg instead.'], 'error');
 
       // switch to use jpeg for fast optimization
-      defaultMimeType = "image/jpeg";
+      defaultMimeType = 'image/jpeg';
     }
 
     this.imageFiles.forEach(async (file: File) => {

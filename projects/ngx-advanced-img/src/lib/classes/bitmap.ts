@@ -2,11 +2,12 @@ import * as exif from 'exifr';
 import mime from 'mime';
 import { Observable, Subject } from 'rxjs';
 
-import Timeout = NodeJS.Timeout;
 import { NgxAdvancedImgJxon } from './jxon';
 // @ts-ignore
 import libheif from 'libheif-js/wasm-bundle';
 import { NgxAdvancedImgHeicConverter } from './heic-converter';
+
+import Timeout = NodeJS.Timeout;
 
 export type NgxAdvancedImgResolution = string | '';
 
@@ -33,19 +34,18 @@ export interface INgxAdvancedImgBitmapInfo {
 }
 
 export interface INgxAdvancedImgOptimizationOptions {
-  sizeLimit?: number | undefined, // the maximum size of the image in bytes, if exceeded, the image will be optimized further
-  minDimension?: number | undefined, // minimum dimension we will reduce to during optimization
-  minScale?: number | undefined, // minimum scale we will reduce to during optimization
-  minQuality?: number | undefined, // minimum quality we will reduce to during optimization
-  mode?: 'retain-size' | 'retain-quality' | 'prefer-size' | 'prefer-quality' | 'alternating-preference' | undefined,
-  strict?: boolean, // if true, false by default, then the function will throw an error if the size limit cannot be achieved
+  sizeLimit?: number | undefined; // the maximum size of the image in bytes, if exceeded, the image will be optimized further
+  minDimension?: number | undefined; // minimum dimension we will reduce to during optimization
+  minScale?: number | undefined; // minimum scale we will reduce to during optimization
+  minQuality?: number | undefined; // minimum quality we will reduce to during optimization
+  mode?: 'retain-size' | 'retain-quality' | 'prefer-size' | 'prefer-quality' | 'alternating-preference' | undefined;
+  strict?: boolean; // if true, false by default, then the function will throw an error if the size limit cannot be achieved
 }
 
 export class NgxAdvancedImgBitmap {
-
   private static ITERATION_FACTOR = 0.025;
-  private static QUALITY_FACTOR = .5;
-  private static PREDICTION_FACTOR = .275; // how much we scale back our quality prediction since the mathematical function is not perfect
+  private static QUALITY_FACTOR = 0.5;
+  private static PREDICTION_FACTOR = 0.275; // how much we scale back our quality prediction since the mathematical function is not perfect
   private static SYSTEM_CANVAS: HTMLCanvasElement | undefined;
 
   public resolution: NgxAdvancedImgResolution;
@@ -55,7 +55,7 @@ export class NgxAdvancedImgBitmap {
   public image: HTMLImageElement | undefined;
   public size: number;
   public debug: boolean; // set to true for console logging
-  private _ttl: number;	// time to live in seconds after it has been loaded
+  private _ttl: number; // time to live in seconds after it has been loaded
   private loadedAt: Date | null;
   private expirationClock: Timeout | null;
   private _destroyed: Subject<INgxAdvancedImgBitmapDataSignature> | undefined;
@@ -115,7 +115,7 @@ export class NgxAdvancedImgBitmap {
    */
   public set ttl(value: number) {
     // set the time to live in seconds
-    this._ttl = (!isNaN(value) && isFinite(value) && +value >= 0) ? value : 0;
+    this._ttl = !isNaN(value) && isFinite(value) && +value >= 0 ? value : 0;
 
     // if we have an expiration clock ticking, clear it
     if (this.expirationClock) {
@@ -204,20 +204,15 @@ export class NgxAdvancedImgBitmap {
     }
   }
 
-  public constructor(
-    src: string | Blob,
-    resolution: NgxAdvancedImgResolution,
-    revision: number,
-    ttl?: number,
-  ) {
-    this.src = (!!src) ? src : '';
-    this.resolution = (resolution !== null && resolution !== undefined) ? resolution : '';
-    this.revision = (!!revision) ? revision : 0;
+  public constructor(src: string | Blob, resolution: NgxAdvancedImgResolution, revision: number, ttl?: number) {
+    this.src = !!src ? src : '';
+    this.resolution = resolution !== null && resolution !== undefined ? resolution : '';
+    this.revision = !!revision ? revision : 0;
     this.loaded = false;
     this.size = 0;
     this.expirationClock = this.loadedAt = null;
 
-    this._ttl = !ttl ? 0 : (!isNaN(ttl) && isFinite(ttl) && +ttl >= 0) ? ttl : 0;
+    this._ttl = !ttl ? 0 : !isNaN(ttl) && isFinite(ttl) && +ttl >= 0 ? ttl : 0;
     this._destroyed = new Subject<INgxAdvancedImgBitmapDataSignature>();
     this._orientation = 1;
     this._mimeType = 'unknown';
@@ -237,14 +232,17 @@ export class NgxAdvancedImgBitmap {
 
     return new Promise((resolve: (value: INgxAdvancedImgBitmapInfo) => void, reject: (reason?: any) => void) => {
       // parse the exif data direction while the image content loads
-      exif.parse(data, true).then((exifData: any) => {
-        resolve({
-          fileSize,
-          exifData,
+      exif
+        .parse(data, true)
+        .then((exifData: any) => {
+          resolve({
+            fileSize,
+            exifData,
+          });
+        })
+        .catch((error: any) => {
+          reject(error);
         });
-      }).catch((error: any) => {
-        reject(error);
-      });
     });
   }
 
@@ -430,8 +428,7 @@ export class NgxAdvancedImgBitmap {
     if (this._objectURL) {
       try {
         domURL?.revokeObjectURL(this._objectURL);
-      } catch (error) {
-      }
+      } catch (error) {}
     }
   }
 
@@ -782,7 +779,7 @@ export class NgxAdvancedImgBitmap {
     const domURL: any = URL || webkitURL || window.URL;
 
     // if our browser doesn't support the URL implementation, then quit
-    if (!domURL || !(domURL).createObjectURL) {
+    if (!domURL || !domURL.createObjectURL) {
       return;
     }
 
@@ -802,7 +799,7 @@ export class NgxAdvancedImgBitmap {
     link.setAttribute('type', 'hidden');
     link.setAttribute('href', url);
     link.setAttribute('target', '_blank');
-    link.download = (typeof extension === 'string' && !!extension) ? `${fileName}.${extension}` : fileName;
+    link.download = typeof extension === 'string' && !!extension ? `${fileName}.${extension}` : fileName;
     document.body.appendChild(link);
 
     // invoke the link click to start the download
@@ -828,7 +825,7 @@ export class NgxAdvancedImgBitmap {
     quality: number,
     resizeFactor: number = 1,
     maxDimension?: number | undefined, // the image will be resized to fit within this max dimension before any further optimization
-    options?: INgxAdvancedImgOptimizationOptions,
+    options?: INgxAdvancedImgOptimizationOptions
   ): Promise<INgxAdvancedImgBitmapOptimization> {
     return this._optimize(
       type,
@@ -864,7 +861,7 @@ export class NgxAdvancedImgBitmap {
     maxDimension?: number | undefined,
     options?: INgxAdvancedImgOptimizationOptions,
     lastOp?: 'quality' | 'scale' | undefined,
-    lastSize?: number,
+    lastSize?: number
   ): Promise<INgxAdvancedImgBitmapOptimization> {
     return new Promise(async (resolve: (value: INgxAdvancedImgBitmapOptimization) => void, reject) => {
       try {
@@ -1142,9 +1139,9 @@ export class NgxAdvancedImgBitmap {
                   const newDims: { width: number, height: number } = this.estimateNewDimensions(fileSize, options?.sizeLimit, width, height);
   
                   if (width > height) {
-                    resizeFactor = resizeFactor - (1 - (newDims.width / width));
+                    resizeFactor = resizeFactor - (1 - newDims.width / width);
                   } else {
-                    resizeFactor = resizeFactor - (1 - (newDims.height / height));
+                    resizeFactor = resizeFactor - (1 - newDims.height / height);
                   }
   
                   if (resizeFactor > oldResizeFactor) {
@@ -1192,7 +1189,12 @@ export class NgxAdvancedImgBitmap {
    * @param width The current width of the file.
    * @param height The current height of the file.
    */
-  private estimateNewDimensions(fileSize: number, targetSize: number, width: number, height: number): { width: number, height: number } {
+  private estimateNewDimensions(
+    fileSize: number,
+    targetSize: number,
+    width: number,
+    height: number
+  ): { width: number; height: number } {
     const bytesToGo: number = fileSize - targetSize;
     const bytesPerPixel: number = fileSize / (width * height);
     const pixelReduction: number = bytesToGo / bytesPerPixel;
@@ -1209,7 +1211,7 @@ export class NgxAdvancedImgBitmap {
         newHeight--;
       }
 
-      if ((width * height) - (newWidth * newHeight) >= pixelReduction) {
+      if (width * height - newWidth * newHeight >= pixelReduction) {
         foundReduction = true;
       }
     }
@@ -1230,7 +1232,7 @@ export class NgxAdvancedImgBitmap {
     }
 
     try {
-      this._orientation = await exif.orientation(this.image) || 1;
+      this._orientation = (await exif.orientation(this.image)) || 1;
     } catch (e) {
       // assume normal orientation if none can be found based on exif info
       this._orientation = 1;

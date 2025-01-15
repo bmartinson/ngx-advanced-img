@@ -3,6 +3,7 @@
 Angular attribute directives suite that provides various HTML img feature extensions.
 
 ## Table of contents
+
 - [ngx-advanced-img](#ngx-advanced-img)
   - [Table of contents](#table-of-contents)
   - [About This Package](#about-this-package)
@@ -12,30 +13,33 @@ Angular attribute directives suite that provides various HTML img feature extens
     - [ngxAdvancedImgFallback](#ngxadvancedimgfallback)
 - [Classes](#classes)
   - [NgxAdvancedImgBitmap](#ngxadvancedimgbitmap)
-      - [Creating Bitmap](#creating-bitmap)
-      - [Optimizing Bitmaps](#optimizing-bitmaps)
+    - [Creating Bitmap](#creating-bitmap)
+    - [Optimizing Bitmaps](#optimizing-bitmaps)
 
 ## About This Package
+
 This package was built to provide easy to use feature directives that are meant to be used with HTML img tags. The first features being created are fallback image loading and progressive image loading and caching. Additionally, it provides helper classes that allow image data to be cached in application memory for quick HTML5 Canvas usage and the library also provides an easy to use interface for encoding images with new mime types and optimize them to meet certain conditions or file sizes.
 
 ## Installation
-```npm install ngx-advanced-img --save```
+
+`npm install ngx-advanced-img --save`
 
 ## Usage
+
 1. Import `NgxAdvancedImgModule` in your app module (or other Angular module) and place it in your imports section:
 
-    ```typescript
-    import { NgxAdvancedImgModule } from "ngx-advanced-img";
+   ```typescript
+   import { NgxAdvancedImgModule } from "ngx-advanced-img";
 
-    @NgModule({
-       imports: [
-         ...,
-         NgxAdvancedImgModule,
-       ],
-       ...
-    })
-    export class AppModule { }
-    ```
+   @NgModule({
+      imports: [
+        ...,
+        NgxAdvancedImgModule,
+      ],
+      ...
+   })
+   export class AppModule { }
+   ```
 
 2. Import `ngx-advanced-img.scss` to your application's styles or add it to your `angular.json` if you use the CLI tools.
 
@@ -46,11 +50,13 @@ This package was built to provide easy to use feature directives that are meant 
 This directive extends HTML img nodes to provide some special fallback loading functionality. If the initial load of the image src value fails, this directive will automatically swap to the provided fallback URL or data URI. Alternatively, you may provide a special value of `cache-bust` and it will handle reloading prevoiusly failed src but with a unique cache busting query parameter attached to the URL (assuming it is a valid URL).
 
 `ngxAdvancedImgFallback` {'cache-bust' | string}
-+ `cache-bust`: If the img src is a valid URL and it fails to load, the img will fallback to the exact same url but with a `?cache-bust` query parameter added to it including a uniqiue timestamp value.
-+ `string`: If the img src fails to load, the img will fallback to the provided string. This should be a valid URL or data URI. If this fails to load, no further action is taken.
+
+- `cache-bust`: If the img src is a valid URL and it fails to load, the img will fallback to the exact same url but with a `?cache-bust` query parameter added to it including a uniqiue timestamp value.
+- `string`: If the img src fails to load, the img will fallback to the provided string. This should be a valid URL or data URI. If this fails to load, no further action is taken.
 
 `ngxAdvancedImgFallbackActive` {read-only boolean}
-+ Returns the active state of the fallback. If the fallback is currently being displayed, then this will return as true. This is useful if you need to change width/height or other attributes of your img element based on whether or not the fallback is active.
+
+- Returns the active state of the fallback. If the fallback is currently being displayed, then this will return as true. This is useful if you need to change width/height or other attributes of your img element based on whether or not the fallback is active.
 
 # Classes
 
@@ -72,7 +78,7 @@ const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(
 ```
 
 - `src: string | Blob` - The source for the image to be loaded. Either a string or file Blob.
-- `resolution: NgxAdvancedImgResolution` - The suffix that will be added to the filepath if it is a string. This allows for variable resolution loading (e.g. '_low-res', '_high-res').
+- `resolution: NgxAdvancedImgResolution` - The suffix that will be added to the filepath if it is a string. This allows for variable resolution loading (e.g. '\_low-res', '\_high-res').
 - `revision: number` - The image revision. It will add a query parameter to help with cache busting if we are trying to load a specific image with revision to it.
 - `ttl?: number` - The time to live. If 0 or undefined, the data will live in memory forever. Otherwise, it will be purged after this many seconds.
 

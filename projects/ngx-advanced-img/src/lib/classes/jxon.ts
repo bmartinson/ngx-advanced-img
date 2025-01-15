@@ -2,7 +2,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable guard-for-in */
-import { DOMImplementation, DOMParser, XMLSerializer, DocumentType } from '@xmldom/xmldom';
+import { DOMImplementation, DOMParser, DocumentType, XMLSerializer } from '@xmldom/xmldom';
+
 import { NgxAdvancedImgEmptyTree } from './empty-tree';
 
 interface IXMLObj extends XMLDocument {
@@ -14,7 +15,6 @@ interface IXMLObj extends XMLDocument {
  * been packaged in order to provide the latest security updates in accordance with the use of @xmldom/xmldom.
  */
 export class NgxAdvancedImgJxon {
-
   private opts: any = {
     valueKey: '_',
     attrKey: '$',
@@ -23,7 +23,7 @@ export class NgxAdvancedImgJxon {
     trueIsEmpty: false,
     autoDate: false,
     ignorePrefixedNodes: false,
-    parseValues: false
+    parseValues: false,
   };
   private aCache: HTMLElement[] = [];
   private rIsNull = /^\s*$/;
@@ -38,24 +38,35 @@ export class NgxAdvancedImgJxon {
 
   // build
   public xmlToJs(oXMLParent: any, nVerbosity?: number, bFreeze?: boolean, bNesteAttributes?: boolean): any {
-    const _nVerb = arguments.length > 1 && typeof nVerbosity === 'number' ? nVerbosity & 3 : /* put here the default verbosity level: */ 1;
-    return this.createObjTree(oXMLParent as Element, _nVerb, bFreeze || false, !!(arguments.length > 3 ? bNesteAttributes : _nVerb === 3));
+    const _nVerb =
+      arguments.length > 1 && typeof nVerbosity === 'number'
+        ? nVerbosity & 3
+        : /* put here the default verbosity level: */ 1;
+    return this.createObjTree(
+      oXMLParent as Element,
+      _nVerb,
+      bFreeze || false,
+      !!(arguments.length > 3 ? bNesteAttributes : _nVerb === 3)
+    );
   }
 
   // stringify
   public jsToString(oObjTree: any, sNamespaceURI?: string, sQualifiedName?: string, oDocumentType?: DocumentType) {
-    return this.xmlToString(
-      this.jsToXml(oObjTree, sNamespaceURI, sQualifiedName, oDocumentType)
-    );
+    return this.xmlToString(this.jsToXml(oObjTree, sNamespaceURI, sQualifiedName, oDocumentType));
   }
 
   // unbuild
-  public jsToXml(oObjTree: any, sNamespaceURI?: string, sQualifiedName?: string, oDocumentType?: DocumentType | null | undefined): XMLDocument {
+  public jsToXml(
+    oObjTree: any,
+    sNamespaceURI?: string,
+    sQualifiedName?: string,
+    oDocumentType?: DocumentType | null | undefined
+  ): XMLDocument {
     const documentImplementation: DOMImplementation = new DOMImplementation();
     const oNewDoc = documentImplementation.createDocument(
       sNamespaceURI || null,
       sQualifiedName || '',
-      oDocumentType as DocumentType | null | undefined,
+      oDocumentType as DocumentType | null | undefined
     ) as unknown as XMLDocument;
     this.loadObjTree(oNewDoc, oNewDoc.documentElement || oNewDoc, oObjTree);
     return oNewDoc;
@@ -74,7 +85,7 @@ export class NgxAdvancedImgJxon {
       return xmlObj.xml;
     } else {
       try {
-        return (new XMLSerializer()).serializeToString(xmlObj as any);
+        return new XMLSerializer().serializeToString(xmlObj as any);
       } catch (e) {
         try {
           return xmlObj.toString();
@@ -144,7 +155,11 @@ export class NgxAdvancedImgJxon {
     const bHighVerb = Boolean(nVerb & 2);
     let nLength = 0;
     let sCollectedTxt = '';
-    let vResult: any = bHighVerb ? {} : /* put here the default value for empty nodes: */ (this.opts.trueIsEmpty ? true : '');
+    let vResult: any = bHighVerb
+      ? {}
+      : /* put here the default value for empty nodes: */ this.opts.trueIsEmpty
+        ? true
+        : '';
     let sProp: string;
     let vContent: any;
 
@@ -154,11 +169,12 @@ export class NgxAdvancedImgJxon {
         oNode = oParentNode.childNodes.item(nItem);
         if (oNode.nodeType === CDATA) {
           sCollectedTxt += oNode.nodeValue;
-        } /* nodeType is "CDATASection" (4) */
-        else if (oNode.nodeType === TEXT) {
+        } /* nodeType is "CDATASection" (4) */ else if (oNode.nodeType === TEXT) {
           sCollectedTxt += oNode.nodeValue?.trim();
-        } /* nodeType is "Text" (3) */
-        else if (oNode.nodeType === ELEMENT && !(this.opts.ignorePrefixedNodes && (oNode as HTMLElement).prefix)) {
+        } /* nodeType is "Text" (3) */ else if (
+          oNode.nodeType === ELEMENT &&
+          !(this.opts.ignorePrefixedNodes && (oNode as HTMLElement).prefix)
+        ) {
           this.aCache.push(oNode as HTMLElement);
         }
         /* nodeType is "Element" (1) */
@@ -223,7 +239,7 @@ export class NgxAdvancedImgJxon {
       }
     }
 
-    if (nVerb === 3 || (nVerb === 2 || nVerb === 1 && nLength > 0) && sCollectedTxt) {
+    if (nVerb === 3 || ((nVerb === 2 || (nVerb === 1 && nLength > 0)) && sCollectedTxt)) {
       vResult[this.opts.valueKey] = vBuiltVal;
     } else if (!bHighVerb && nLength === 0 && sCollectedTxt) {
       vResult = vBuiltVal;
@@ -248,7 +264,6 @@ export class NgxAdvancedImgJxon {
       if (oParentObj === oParentObj.valueOf()) {
         return;
       }
-
     } else if (oParentObj.constructor === Date) {
       oParentEl.appendChild(oXMLDoc.createTextNode(oParentObj.toISOString()));
     }
@@ -268,10 +283,12 @@ export class NgxAdvancedImgJxon {
       /* verbosity level is 0 */
       if (sName === this.opts.valueKey) {
         if (vValue !== null && vValue !== true) {
-          oParentEl.appendChild(oXMLDoc.createTextNode(vValue.constructor === Date ? vValue.toISOString() : String(vValue)));
+          oParentEl.appendChild(
+            oXMLDoc.createTextNode(vValue.constructor === Date ? vValue.toISOString() : String(vValue))
+          );
         }
-
-      } else if (sName === this.opts.attrKey) { /* verbosity level is 3 */
+      } else if (sName === this.opts.attrKey) {
+        /* verbosity level is 3 */
         for (const sAttrib in vValue) {
           oParentEl.setAttribute(sAttrib, `${vValue[sAttrib]}`);
         }
@@ -315,5 +332,4 @@ export class NgxAdvancedImgJxon {
       }
     }
   }
-
 }

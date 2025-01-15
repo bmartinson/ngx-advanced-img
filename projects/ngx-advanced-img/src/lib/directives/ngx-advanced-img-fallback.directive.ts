@@ -1,11 +1,10 @@
 import { Directive, ElementRef, Input, OnDestroy, OnInit, Renderer2 } from '@angular/core';
 
 @Directive({
-    selector: '[ngxAdvancedImgFallback]',
-    standalone: false
+  selector: '[ngxAdvancedImgFallback]',
+  standalone: false,
 })
 export class NgxAdvancedImgFallbackDirective implements OnInit, OnDestroy {
-
   private _failureURL: string | undefined; // the url for the latest fallback attempt
   private _src: 'cache-bust' | string;
   private _errorHandler: () => void;
@@ -68,7 +67,10 @@ export class NgxAdvancedImgFallbackDirective implements OnInit, OnDestroy {
    * @param elementRef The element ref so we can look at native properties like src.
    * @param renderer A renderer reference so we can listen to events.
    */
-  public constructor(private elementRef: ElementRef, private renderer: Renderer2) {
+  public constructor(
+    private elementRef: ElementRef,
+    private renderer: Renderer2
+  ) {
     this._src = '';
 
     if (this.elementRef?.nativeElement?.nodeName !== 'IMG') {
@@ -115,7 +117,10 @@ export class NgxAdvancedImgFallbackDirective implements OnInit, OnDestroy {
         const now = new Date();
 
         // generate some unique parameter value for the cache bust
-        url.searchParams.append('cache-bust', `${now.getUTCMinutes()}${now.getUTCSeconds()}${now.getUTCMilliseconds()}`);
+        url.searchParams.append(
+          'cache-bust',
+          `${now.getUTCMinutes()}${now.getUTCSeconds()}${now.getUTCMilliseconds()}`
+        );
 
         // convert the url back out to a string
         this._failureURL = url.toString();
@@ -128,5 +133,4 @@ export class NgxAdvancedImgFallbackDirective implements OnInit, OnDestroy {
       this.renderer.setAttribute(this.elementRef.nativeElement, 'src', this._src);
     }
   }
-
 }
