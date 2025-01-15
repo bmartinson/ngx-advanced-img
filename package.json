@@ -8,7 +8,8 @@
     "build-publish": "ng build ngx-advanced-img --configuration=production && cd dist/ngx-advanced-img/ && npm publish && cd ../.. && rm -rf ./dist",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "lint": "ng lint"
+    "format": "npx prettier --write . $@",
+    "lint": "ng lint --fix $@"
   },
   "private": false,
   "license": "MIT",
@@ -55,6 +56,7 @@
     "@angular-devkit/build-angular": "^19.0.5",
     "@angular/cli": "~19.0.5",
     "@angular/compiler-cli": "^19.0.4",
+    "@trivago/prettier-plugin-sort-imports": "^5.2.1",
     "@types/jasmine": "~5.1.5",
     "@types/node": "^22.10.2",
     "angular-eslint": "19.0.2",
@@ -67,6 +69,7 @@
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
     "ng-packagr": "^19.0.1",
+    "prettier": "^3.4.2",
     "typescript": "~5.6.0",
     "typescript-eslint": "8.18.0"
   }
