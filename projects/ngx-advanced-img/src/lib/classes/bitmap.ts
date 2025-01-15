@@ -205,9 +205,9 @@ export class NgxAdvancedImgBitmap {
   }
 
   public constructor(src: string | Blob, resolution: NgxAdvancedImgResolution, revision: number, ttl?: number) {
-    this.src = !!src ? src : '';
+    this.src = src ? src : '';
     this.resolution = resolution !== null && resolution !== undefined ? resolution : '';
-    this.revision = !!revision ? revision : 0;
+    this.revision = revision ? revision : 0;
     this.loaded = false;
     this.size = 0;
     this.expirationClock = this.loadedAt = null;
@@ -346,7 +346,7 @@ export class NgxAdvancedImgBitmap {
   public static isMimeTypeSupported(mimeType: string): boolean {
     this.SYSTEM_CANVAS = this.SYSTEM_CANVAS || document.createElement('canvas');
 
-    if (!!(this.SYSTEM_CANVAS.getContext && this.SYSTEM_CANVAS.getContext('2d'))) {
+    if (this.SYSTEM_CANVAS.getContext && this.SYSTEM_CANVAS.getContext('2d')) {
       return this.SYSTEM_CANVAS.toDataURL(mimeType).indexOf(`data:${mimeType}`) === 0;
     }
 
@@ -362,10 +362,12 @@ export class NgxAdvancedImgBitmap {
    */
   private static imageDataToBlob(imageData: ImageData, mimeType: string, quality: number): Promise<Blob> {
     return new Promise((resolve, reject) => {
-      let canvas = document.createElement('canvas');
+      const canvas = document.createElement('canvas');
       canvas.width = imageData.width;
       canvas.height = imageData.height;
-      let ctx = canvas.getContext('2d');
+
+      const ctx = canvas.getContext('2d');
+
       if (!ctx) {
         throw new Error('Could not get 2d context');
       }
@@ -440,7 +442,9 @@ export class NgxAdvancedImgBitmap {
     if (this._objectURL) {
       try {
         domURL?.revokeObjectURL(this._objectURL);
-      } catch (error) {}
+      } catch (error) {
+        console.error('An error occurred while cleaning up resources.', error);
+      }
     }
   }
 
@@ -457,12 +461,11 @@ export class NgxAdvancedImgBitmap {
       return Promise.reject(new Error('No valid source provided'));
     }
 
-    let blobData: Blob;
     if (typeof this.src === 'string') {
       this.src = NgxAdvancedImgBitmap.dataURItoBlob(this.src);
     }
 
-    blobData = this.src;
+    const blobData: Blob = this.src;
 
     // if we have an expiration clock ticking, clear it
     if (this.expirationClock) {
@@ -571,7 +574,7 @@ export class NgxAdvancedImgBitmap {
             ctx.drawImage(this.image, 0, 0);
 
             // if we haven't loaded anonymously, we'll taint the canvas and crash the application
-            let dataUri: string = anonymous ? canvas.toDataURL(this._mimeType, fullQualityLoad ? 1 : undefined) : '';
+            const dataUri: string = anonymous ? canvas.toDataURL(this._mimeType, fullQualityLoad ? 1 : undefined) : '';
 
             if (typeof this.src === 'string') {
               // store the exif data
@@ -586,7 +589,9 @@ export class NgxAdvancedImgBitmap {
               if (this._objectURL) {
                 try {
                   domURL.revokeObjectURL(this._objectURL);
-                } catch (error) {}
+                } catch (error) {
+                  console.error('An error occurred while cleaning up resources.', error);
+                }
               }
 
               // get the bitmap data in blob format
@@ -603,7 +608,7 @@ export class NgxAdvancedImgBitmap {
             this.loaded = true;
             this.size = this.image.naturalWidth * this.image.naturalHeight;
 
-            const head: string = `data:${this._mimeType};base64,`;
+            const head = `data:${this._mimeType};base64,`;
             this._fileSize = Math.round(atob(dataUri.substring(head.length)).length);
 
             // track the time at which this asset was first asked to load
@@ -837,7 +842,7 @@ export class NgxAdvancedImgBitmap {
   public async optimize(
     type: string,
     quality: number,
-    resizeFactor: number = 1,
+    resizeFactor = 1,
     maxDimension?: number | undefined, // the image will be resized to fit within this max dimension before any further optimization
     options?: INgxAdvancedImgOptimizationOptions
   ): Promise<INgxAdvancedImgBitmapOptimization> {
@@ -864,7 +869,7 @@ export class NgxAdvancedImgBitmap {
   private async _optimize(
     type: string,
     quality: number,
-    resizeFactor: number = 1,
+    resizeFactor = 1,
     maxDimension?: number | undefined,
     options?: INgxAdvancedImgOptimizationOptions,
     lastOp?: 'quality' | 'scale' | undefined,
@@ -952,7 +957,7 @@ export class NgxAdvancedImgBitmap {
         ctx?.drawImage(this.image, 0, 0, canvas.width, canvas.height);
 
         // if we haven't loaded anonymously, we'll taint the canvas and crash the application
-        let blob = await NgxAdvancedImgBitmap.canvasToBlobPromise(canvas, type, quality);
+        const blob = await NgxAdvancedImgBitmap.canvasToBlobPromise(canvas, type, quality);
 
         // clean up the canvas
         if (canvas) {
@@ -1269,9 +1274,11 @@ export class NgxAdvancedImgBitmap {
 
     try {
       this._orientation = (await exif.orientation(this.image)) || 1;
-    } catch (e) {
+    } catch (error) {
       // assume normal orientation if none can be found based on exif info
       this._orientation = 1;
+
+      console.error('An error occurred while reading exif orientation data.', error);
     }
 
     if (this._orientation != null) {

@@ -2,7 +2,6 @@ import { Directive, ElementRef, Input, OnDestroy, OnInit, Renderer2 } from '@ang
 
 @Directive({
   selector: '[ngxAdvancedImgFallback]',
-  standalone: false,
 })
 export class NgxAdvancedImgFallbackDirective implements OnInit, OnDestroy {
   private _failureURL: string | undefined; // the url for the latest fallback attempt
@@ -109,6 +108,7 @@ export class NgxAdvancedImgFallbackDirective implements OnInit, OnDestroy {
    * fallback image in its place.
    */
   private onError(): void {
+    console.log('on error for cache busting fallbacks...');
     if (this._src === 'cache-bust') {
       // look to see if the current url is the same as the last fallback url
       if (this.elementRef?.nativeElement?.src !== this._failureURL) {

@@ -5,12 +5,14 @@ import {
   INgxAdvancedImgBitmapOptimization,
   INgxAdvancedImgHeicConversion,
   NgxAdvancedImgBitmap,
+  NgxAdvancedImgFallbackDirective,
 } from '../../projects/ngx-advanced-img/src/public-api';
 
 @Component({
   selector: 'ngx-advanced-img-lib-app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
+  imports: [NgxAdvancedImgFallbackDirective],
 })
 export class AppComponent {
   public imageFiles: File[] | null = null;
