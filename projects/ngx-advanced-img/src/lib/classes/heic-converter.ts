@@ -1,5 +1,4 @@
 import * as exif from 'exifr';
-// @ts-ignore
 import libheif from 'libheif-js/wasm-bundle';
 
 export interface INgxAdvancedImgHeicConversion {
@@ -54,8 +53,9 @@ export class NgxAdvancedImgHeicConverter {
     return new Promise((resolve, reject) => {
       try {
         // Create an offscreen canvas
-        let offscreenCanvas = new OffscreenCanvas(imageData.width, imageData.height);
-        let ctx = offscreenCanvas.getContext('2d');
+        const offscreenCanvas: OffscreenCanvas = new OffscreenCanvas(imageData.width, imageData.height);
+        const ctx: OffscreenCanvasRenderingContext2D | null = offscreenCanvas.getContext('2d');
+
         if (!ctx) {
           return reject(new Error('Could not get 2d context'));
         }
@@ -97,6 +97,8 @@ export class NgxAdvancedImgHeicConverter {
         x.get_height();
       } catch (e) {
         valid = false;
+
+        console.error('The image appears to be corrupt.', e);
       }
 
       return valid;
@@ -116,7 +118,7 @@ export class NgxAdvancedImgHeicConverter {
    * @param src
    * @returns
    */
-  public static async convert(src: Blob, mimeType: string = 'image/jpeg'): Promise<INgxAdvancedImgHeicConversion> {
+  public static async convert(src: Blob, mimeType = 'image/jpeg'): Promise<INgxAdvancedImgHeicConversion> {
     // if no valid source, then reject the load
     if (!src) {
       return Promise.reject(new Error('No valid source provided'));

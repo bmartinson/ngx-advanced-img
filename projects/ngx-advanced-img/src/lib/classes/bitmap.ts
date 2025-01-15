@@ -1,6 +1,4 @@
 import * as exif from 'exifr';
-// @ts-ignore
-import libheif from 'libheif-js/wasm-bundle';
 import mime from 'mime';
 import { Observable, Subject } from 'rxjs';
 
