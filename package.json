@@ -9,7 +9,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "format": "npx prettier --write . $@",
-    "lint": "ng lint --fix $@"
+    "lint": "ng lint --fix ngx-advanced-img-sample; ng lint --fix ngx-advanced-img"
   },
   "private": false,
   "license": "MIT",
