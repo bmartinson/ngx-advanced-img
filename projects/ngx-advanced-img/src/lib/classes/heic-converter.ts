@@ -1,4 +1,5 @@
 import * as exif from 'exifr';
+// @ts-ignore
 import libheif from 'libheif-js/wasm-bundle';
 
 export interface INgxAdvancedImgHeicConversion {
