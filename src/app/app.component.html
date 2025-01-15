@@ -4,83 +4,76 @@
   <h2>Standard Example</h2>
   <h3>Some image src is going to fail and then load a good image provided as a data URI.</h3>
   <div class="ngx-ai-row">
-    <img ngxAdvancedImgFallback="data:image/svg+xml;base64,PHN2Z yB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTAgMjUwIj4KICAgIDxwYXRoIGZpbGw9IiNERDAwMzEiIGQ9Ik0xMjUgMzBMMzEuOSA2My4ybDE0LjIgMTIzLjFMMTI1IDIzMGw3OC45LTQzLjcgMTQuMi0xMjMuMXoiIC8+CiAgICA8cGF0aCBmaWxsPSIjQzMwMDJGIiBkPSJNMTI1IDMwdjIyLjItLjFWMjMwbDc4LjktNDMuNyAxNC4yLTEyMy4xTDEyNSAzMHoiIC8+CiAgICA8cGF0aCAgZmlsbD0iI0ZGRkZGRiIgZD0iTTEyNSA1Mi4xTDY2LjggMTgyLjZoMjEuN2wxMS43LTI5LjJoNDkuNGwxMS43IDI5LjJIMTgzTDEyNSA1Mi4xem0xNyA4My4zaC0zNGwxNy00MC45IDE3IDQwLjl6IiAvPgogIDwvc3ZnPg=="
-         width="300"
-         alt="Some Logo"
-         src="https://www.brianmartinson.com/files/this-file-is-404.jpg">
+    <img
+      ngxAdvancedImgFallback="data:image/svg+xml;base64,PHN2Z yB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTAgMjUwIj4KICAgIDxwYXRoIGZpbGw9IiNERDAwMzEiIGQ9Ik0xMjUgMzBMMzEuOSA2My4ybDE0LjIgMTIzLjFMMTI1IDIzMGw3OC45LTQzLjcgMTQuMi0xMjMuMXoiIC8+CiAgICA8cGF0aCBmaWxsPSIjQzMwMDJGIiBkPSJNMTI1IDMwdjIyLjItLjFWMjMwbDc4LjktNDMuNyAxNC4yLTEyMy4xTDEyNSAzMHoiIC8+CiAgICA8cGF0aCAgZmlsbD0iI0ZGRkZGRiIgZD0iTTEyNSA1Mi4xTDY2LjggMTgyLjZoMjEuN2wxMS43LTI5LjJoNDkuNGwxMS43IDI5LjJIMTgzTDEyNSA1Mi4xem0xNyA4My4zaC0zNGwxNy00MC45IDE3IDQwLjl6IiAvPgogIDwvc3ZnPg=="
+      width="300"
+      alt="Some Logo"
+      src="https://www.brianmartinson.com/files/this-file-is-404.jpg" />
   </div>
 
   <h2>Image Optimization</h2>
   <h3>Select an image and optimize it for size if you provide a byte limit.</h3>
-  <i>Open your JS Console to review what's going on after clicking optimize... <a
-       href="https://github.com/bmartinson/ngx-advanced-img?tab=readme-ov-file#ngxadvancedimgbitmap"
-       target="_blank">Have questions? Read the README.</a></i>
+  <i
+    >Open your JS Console to review what's going on after clicking optimize...
+    <a href="https://github.com/bmartinson/ngx-advanced-img?tab=readme-ov-file#ngxadvancedimgbitmap" target="_blank"
+      >Have questions? Read the README.</a
+    ></i
+  >
 
-  <hr>
+  <hr />
 
   <form>
     <div>
       <label for="imageInput">Select Images:&nbsp;</label>
-      <input type="file"
-             id="imageInput"
-             accept="*"
-             (change)="onFileChange($event)"
-             multiple>
+      <input type="file" id="imageInput" accept="*" (change)="onFileChange($event)" multiple />
     </div>
-    <hr>
+    <hr />
     <div>
       <label for="scaleInput">Scale (0-100%):&nbsp;</label>
-      <input type="number"
-             id="scaleInput"
-             min="0"
-             max="100"
-             step="1"
-             [value]="scale"
-             (input)="onScaleChange($event)">
+      <input type="number" id="scaleInput" min="0" max="100" step="1" [value]="scale" (input)="onScaleChange($event)" />
     </div>
     <div><i>Required. Starting scale of the image overall.</i></div>
-    <hr>
+    <hr />
     <div>
       <label for="qualityInput">Quality (0-1):&nbsp;</label>
-      <input type="number"
-             id="qualityInput"
-             min="0"
-             max="1"
-             step="0.01"
-             [value]="quality"
-             (input)="onQualityChange($event)">
+      <input
+        type="number"
+        id="qualityInput"
+        min="0"
+        max="1"
+        step="0.01"
+        [value]="quality"
+        (input)="onQualityChange($event)" />
     </div>
     <div><i>Required. Starting encoding quality.</i></div>
-    <hr>
+    <hr />
     <div>
       <label for="sizeInput">Size Limit (B):&nbsp;</label>
-      <input type="number"
-             id="sizeInput"
-             min="1"
-             step="0.01"
-             [value]="size"
-             (input)="onSizeChange($event)">
+      <input type="number" id="sizeInput" min="1" step="0.01" [value]="size" (input)="onSizeChange($event)" />
     </div>
-    <div><i>Optional. Max bytes to optimize the file to. Pass 0 and the file will just be scaled and encoded based on
-        the above parameters. MB to <a href="https://www.gbmb.org/bytes-to-mb"
-           target="_blank">Byte Calculator</a> if you need help</i></div>
-    <hr>
+    <div>
+      <i
+        >Optional. Max bytes to optimize the file to. Pass 0 and the file will just be scaled and encoded based on the
+        above parameters. MB to <a href="https://www.gbmb.org/bytes-to-mb" target="_blank">Byte Calculator</a> if you
+        need help</i
+      >
+    </div>
+    <hr />
     <div>
       <label for="maxDimensionInput">Max Allowed Dimension (pixels):&nbsp;</label>
-      <input type="number"
-             id="maxDimensionInput"
-             min="1"
-             step="1"
-             [value]="maxDimension"
-             (input)="onMaxDimensionChange($event)">
+      <input
+        type="number"
+        id="maxDimensionInput"
+        min="1"
+        step="1"
+        [value]="maxDimension"
+        (input)="onMaxDimensionChange($event)" />
     </div>
     <div><i>Optional. Max allowable pixels in a given dimension (width/height).</i></div>
-    <hr>
+    <hr />
     <div>
       <label for="optimizationModeInput">Optimization Mode:&nbsp;</label>
-      <select id="optimizationModeInput"
-              [value]="mode"
-              (change)="onModeChange($event)">
+      <select id="optimizationModeInput" [value]="mode" (change)="onModeChange($event)">
         <option value="prefer-quality">Prefer Quality</option>
         <option value="prefer-size">Prefer Size</option>
         <option value="retain-size">Retain Size</option>
@@ -89,29 +82,29 @@
       </select>
     </div>
     <div><i>Require, optimization mode. Go check the readme linked above to understand how each works.</i></div>
-    <hr>
+    <hr />
     <div>
       <label for="retainMimeTypeInput">Retain mime type (webp if not checked):&nbsp;</label>
-      <input type="checkbox"
-             id="retainMimeTypeInput"
-             [value]="retainMimeType"
-             (change)="onRetainMimeTypeChange($event)">
+      <input
+        type="checkbox"
+        id="retainMimeTypeInput"
+        [value]="retainMimeType"
+        (change)="onRetainMimeTypeChange($event)" />
     </div>
-    <hr>
+    <hr />
     <div>
       <label for="strictModeInput">Use Strict Mode (fail when size limit cannot be reached):&nbsp;</label>
-      <input type="checkbox"
-             id="strictModeInput"
-             [value]="strictMode"
-             (change)="onStrictModeChange($event)">
+      <input type="checkbox" id="strictModeInput" [value]="strictMode" (change)="onStrictModeChange($event)" />
     </div>
-    <div><i>If turned off, the optimize will do its best and give you its best. When on, it will fail if the file size
-        can't be achieved.</i></div>
-    <hr>
     <div>
-      <button type="button"
-              id="processButton"
-              (click)="processImage()">Optimize Images</button>
+      <i
+        >If turned off, the optimize will do its best and give you its best. When on, it will fail if the file size
+        can't be achieved.</i
+      >
+    </div>
+    <hr />
+    <div>
+      <button type="button" id="processButton" (click)="processImage()">Optimize Images</button>
     </div>
   </form>
 
