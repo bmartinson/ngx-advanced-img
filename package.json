@@ -6,7 +6,7 @@
     "start": "ng serve",
     "build": "ng build ngx-advanced-img",
     "build-publish": "npm run build-publish-npmjs && npm run build-publish-github",
-    "_build-publish": "ng build ngx-draggable-dom --configuration=production && cd dist/ngx-draggable-dom/ && npm publish && cd ../.. && rm -rf ./dist",
+    "_build-publish": "ng build ngx-advanced-img --configuration=production && cd dist/ngx-advanced-img/ && npm publish && cd ../.. && rm -rf ./dist",
     "build-publish-npmjs": "sed -i '' 's/\"name\": \"ngx-advanced-img\"/\"name\": \"ngx-advanced-img\"/' projects/ngx-advanced-img/package.json && npm run _build-publish; git checkout -- ./projects/ngx-advanced-img/package.json",
     "build-publish-github": "sed -i '' 's/\"name\": \"ngx-advanced-img\"/\"name\": \"@bmartinson/ngx-advanced-img\"/' projects/ngx-advanced-img/package.json && npm run _build-publish; git checkout --  ./projects/ngx-advanced-img/package.json",
     "watch": "ng build --watch --configuration development",
