@@ -15,8 +15,8 @@ Angular attribute directives suite that provides various HTML img feature extens
     - [ngxAdvancedImgFallback](#ngxadvancedimgfallback)
 - [Classes](#classes)
   - [NgxAdvancedImgBitmap](#ngxadvancedimgbitmap)
-      - [Creating Bitmap](#creating-bitmap)
-      - [Optimizing Bitmaps](#optimizing-bitmaps)
+    - [Creating Bitmap](#creating-bitmap)
+    - [Optimizing Bitmaps](#optimizing-bitmaps)
 
 ## About This Package
 
@@ -29,34 +29,35 @@ This package was built to provide easy to use feature directives that are meant 
 ## Usage
 
 ### Features
+
 If you use Angular modules and would like to use the directive or another feature, import it into your module.
 
-   ```typescript
-   import { NgxAdvancedImgFallbackDirective } from "ngx-advanced-img";
+```typescript
+import { NgxAdvancedImgFallbackDirective } from "ngx-advanced-img";
 
-   @NgModule({
-      imports: [
-        ...,
-        NgxAdvancedImgDirective,
-      ],
-      ...
-   })
-   export class AppModule { }
-   ```
+@NgModule({
+   imports: [
+     ...,
+     NgxAdvancedImgDirective,
+   ],
+   ...
+})
+export class AppModule { }
+```
 
-  Better yet, just use the directive or other feature directly where relevant.
+Better yet, just use the directive or other feature directly where relevant.
 
-   ```typescript
-   import { NgxAdvancedImgFallbackDirective } from "ngx-advanced-img";
+```typescript
+import { NgxAdvancedImgFallbackDirective } from 'ngx-advanced-img';
 
-   @Component({
-      selector: 'your-selector-name',
-      templateUrl: './your-component.component.html',
-      styleUrls: ['./your-component.component.scss'],
-      imports: [NgxAdvancedImgFallbackDirective],
-    })
-    export class AppComponent { }
-   ```
+@Component({
+  selector: 'your-selector-name',
+  templateUrl: './your-component.component.html',
+  styleUrls: ['./your-component.component.scss'],
+  imports: [NgxAdvancedImgFallbackDirective],
+})
+export class AppComponent {}
+```
 
 ### Styling
 
