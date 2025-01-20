@@ -18,6 +18,7 @@ export class AppComponent {
   public retainMimeType = false;
   public mode: 'retain-size' | 'retain-quality' | 'prefer-size' | 'prefer-quality' | 'alternating-preference' = 'prefer-size';
   private worker: Worker | null = null;
+  private bitmap: NgxAdvancedImgBitmap | null = null;
 
   private static getFileNameWithoutExtension(file: File): string {
     const fileName = file.name;
@@ -122,6 +123,12 @@ export class AppComponent {
         }
         // Implement image processing logic here
         const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(src, '', 0, 0);
+        if (!this.bitmap) {
+          this.bitmap = new NgxAdvancedImgBitmap(src, '', 0, 0);
+        } else {
+          this.bitmap.reuse(src, '', 0, 0);
+        }
+        
         bitmap.debug = true;
 
         NgxAdvancedImgBitmap.getImageDataFromBlob(file as Blob).then((unOptimizedData: INgxAdvancedImgBitmapInfo) => {
@@ -181,7 +188,7 @@ export class AppComponent {
                 performance.clearMeasures();
 
                 // clean up the bitmap
-                bitmap.destroy();
+                //bitmap.destroy();
               }); // let the errors bubble up
             });
           } else {
