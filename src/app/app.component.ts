@@ -95,7 +95,6 @@ export class AppComponent {
 
     // if not retaining mime type, let's use webp by default
     let defaultMimeType = "image/webp";
-    let supportsWebp = NgxAdvancedImgBitmap.isMimeTypeSupported('image/webp');
 
     if (!this.retainMimeType && !supportsWebp) {
       this.prettyLog(['image/webp output is not supported by your browser....using image/jpeg instead.'], 'error');
@@ -188,7 +187,7 @@ export class AppComponent {
                 performance.clearMeasures();
 
                 // clean up the bitmap
-                //bitmap.destroy();
+                bitmap.destroy();
               }); // let the errors bubble up
             });
           } else {
