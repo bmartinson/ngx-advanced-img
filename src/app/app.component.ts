@@ -19,12 +19,17 @@ export class AppComponent {
   public mode: 'retain-size' | 'retain-quality' | 'prefer-size' | 'prefer-quality' | 'alternating-preference' = 'prefer-size';
   private worker: Worker | null = null;
   private bitmap: NgxAdvancedImgBitmap | null = null;
+  private supportsWebp: boolean = false;
 
   private static getFileNameWithoutExtension(file: File): string {
     const fileName = file.name;
     const lastDotIndex = fileName.lastIndexOf('.');
     if (lastDotIndex === -1) return fileName; // No extension found
     return fileName.substring(0, lastDotIndex);
+  }
+
+  public constructor() {
+    this.supportsWebp = NgxAdvancedImgBitmap.isMimeTypeSupported('image/webp');
   }
 
   public onFileChange(event: Event): void {
@@ -96,7 +101,7 @@ export class AppComponent {
     // if not retaining mime type, let's use webp by default
     let defaultMimeType = "image/webp";
 
-    if (!this.retainMimeType && !supportsWebp) {
+    if (!this.retainMimeType && !this.supportsWebp) {
       this.prettyLog(['image/webp output is not supported by your browser....using image/jpeg instead.'], 'error');
 
       // switch to use jpeg for fast optimization
@@ -111,7 +116,7 @@ export class AppComponent {
           try {
             const result = await this.workerConvert(
               file,
-              this.retainMimeType ? 'image/jpeg' : defaultMimeType
+              'image/jpeg'
             );
   
             src = result.blob;
