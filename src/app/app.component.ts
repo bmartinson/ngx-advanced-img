@@ -191,7 +191,7 @@ export class AppComponent {
                 performance.clearMarks();
                 performance.clearMeasures();
 
-                
+                this.bitmap?.destroy();
               }); // let the errors bubble up
             });
           } else {
@@ -202,11 +202,6 @@ export class AppComponent {
         });
       }
     });
-
-    if (this.bitmap) {
-      this.bitmap.src = '';
-      this.bitmap.destroy();
-    }
   }
 
   private workerConvert(file: File, mimeType: string): Promise<INgxAdvancedImgHeicConversion> {
