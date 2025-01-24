@@ -361,7 +361,7 @@ export class NgxAdvancedImgBitmap {
    */
   private static imageDataToBlob(imageData: ImageData, mimeType: string, quality: number): Promise<Blob> {
     return new Promise((resolve, reject) => {
-      let canvas: HTMLCanvasElement | null = NgxAdvancedImgCanvasHelper.requestCanvas();
+      const canvas: HTMLCanvasElement = NgxAdvancedImgCanvasHelper.requestCanvas();
       canvas.width = imageData.width;
       canvas.height = imageData.height;
 
@@ -377,7 +377,6 @@ export class NgxAdvancedImgBitmap {
         (blob: Blob | null) => {
           if (canvas) {
             NgxAdvancedImgCanvasHelper.returnCanvas(canvas);
-            canvas = null;
           }
 
           if (!blob) {
@@ -552,7 +551,7 @@ export class NgxAdvancedImgBitmap {
             }
 
             // create a canvas to paint to
-            let canvas: HTMLCanvasElement | null = NgxAdvancedImgCanvasHelper.requestCanvas();
+            const canvas: HTMLCanvasElement = NgxAdvancedImgCanvasHelper.requestCanvas();
 
             // configure the dimensions of the canvas
             canvas.width = this.image.width;
@@ -605,7 +604,6 @@ export class NgxAdvancedImgBitmap {
             // clean up the canvas
             if (canvas) {
               NgxAdvancedImgCanvasHelper.returnCanvas(canvas);
-              canvas = null;
             }
 
             this.loaded = true;
@@ -889,7 +887,7 @@ export class NgxAdvancedImgBitmap {
         }
 
         // draw the image to the canvas
-        let canvas: HTMLCanvasElement | null = NgxAdvancedImgCanvasHelper.requestCanvas();
+        const canvas: HTMLCanvasElement = NgxAdvancedImgCanvasHelper.requestCanvas();
         let width: number = (canvas.width = this.image.width * resizeFactor);
         let height: number = (canvas.height = this.image.height * resizeFactor);
         let minThresholdReached = false;
@@ -965,7 +963,6 @@ export class NgxAdvancedImgBitmap {
         // clean up the canvas
         if (canvas) {
           NgxAdvancedImgCanvasHelper.returnCanvas(canvas);
-          canvas = null;
         }
 
         if (!blob) {

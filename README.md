@@ -15,8 +15,9 @@ Angular attribute directives suite that provides various HTML img feature extens
     - [ngxAdvancedImgFallback](#ngxadvancedimgfallback)
 - [Classes](#classes)
   - [NgxAdvancedImgBitmap](#ngxadvancedimgbitmap)
-    - [Creating Bitmap](#creating-bitmap)
-    - [Optimizing Bitmaps](#optimizing-bitmaps)
+      - [Creating Bitmap](#creating-bitmap)
+      - [Optimizing Bitmaps](#optimizing-bitmaps)
+  - [NgxAdvancedImgCanvasHelper](#ngxadvancedimgcanvashelper)
 
 ## About This Package
 
@@ -146,6 +147,32 @@ bitmap.load().finally(() => {
     - `retain-size` - Reduces the quality of the photo only in order to try and achieve the `sizeLimit` threshold.
     - `alternating-preference` - Alternates between adjusting quality and size. This is usually the slowest method.
   - `strict` - Optional parameter, if set to true, will throw an exception if a given `sizeLimit` is unobtainable. If set to false, the optimization will return whatever data it can generate as close to the size limit as possible.
+
+## NgxAdvancedImgCanvasHelper
+
+This class is used to act as a static memory pool for HTMLCanvasElement allocations so that the repeated process of canvas use within the NgxAdvancedImgBitmap class or in other implementations can re-use canvases
+as often as possible and not rely on efficient JavaScript browser garbage collection.
+
+**Sample**
+```typescript
+// get a canvas to work with...
+const canvas: HTMLCanvasElement = NgxAdvancedImgCanvasHelper.requestCanvas();
+
+// do some work with a canvas...
+
+canvas.width = image.width;
+canvas.height = image.height;
+
+const ctx: CanvasRenderingContext2D | null = canvas?.getContext('2d', {
+  desynchronized: false,
+  willReadFrequently: true,
+});
+
+ctx?.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+// once done working with the canvas, return it to the pool...
+NgxAdvancedImgCanvasHelper.returnCanvas(canvas);
+```
 
 **Important Note**
 
