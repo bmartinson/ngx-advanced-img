@@ -2,6 +2,7 @@ import * as exif from 'exifr';
 import mime from 'mime';
 import { Observable, Subject } from 'rxjs';
 
+import { NgxAdvancedImgCanvasHelper } from './canvas-helper';
 import { NgxAdvancedImgHeicConverter } from './heic-converter';
 import { NgxAdvancedImgJxon } from './jxon';
 
@@ -342,7 +343,7 @@ export class NgxAdvancedImgBitmap {
    * @param mimeType The mimeType to check for support.
    */
   public static isMimeTypeSupported(mimeType: string): boolean {
-    this.SYSTEM_CANVAS = this.SYSTEM_CANVAS || document.createElement('canvas');
+    this.SYSTEM_CANVAS = this.SYSTEM_CANVAS || NgxAdvancedImgCanvasHelper.requestCanvas();
 
     if (this.SYSTEM_CANVAS.getContext && this.SYSTEM_CANVAS.getContext('2d')) {
       return this.SYSTEM_CANVAS.toDataURL(mimeType).indexOf(`data:${mimeType}`) === 0;
@@ -360,7 +361,7 @@ export class NgxAdvancedImgBitmap {
    */
   private static imageDataToBlob(imageData: ImageData, mimeType: string, quality: number): Promise<Blob> {
     return new Promise((resolve, reject) => {
-      const canvas = document.createElement('canvas');
+      let canvas: HTMLCanvasElement | null = NgxAdvancedImgCanvasHelper.requestCanvas();
       canvas.width = imageData.width;
       canvas.height = imageData.height;
 
@@ -374,6 +375,11 @@ export class NgxAdvancedImgBitmap {
 
       canvas.toBlob(
         (blob: Blob | null) => {
+          if (canvas) {
+            NgxAdvancedImgCanvasHelper.returnCanvas(canvas);
+            canvas = null;
+          }
+
           if (!blob) {
             return reject('ERR_CANVAS Error on converting imagedata to blob: Could not get blob from canvas');
           }
@@ -546,7 +552,7 @@ export class NgxAdvancedImgBitmap {
             }
 
             // create a canvas to paint to
-            let canvas: HTMLCanvasElement | null = document.createElement('canvas');
+            let canvas: HTMLCanvasElement | null = NgxAdvancedImgCanvasHelper.requestCanvas();
 
             // configure the dimensions of the canvas
             canvas.width = this.image.width;
@@ -598,8 +604,7 @@ export class NgxAdvancedImgBitmap {
 
             // clean up the canvas
             if (canvas) {
-              ctx?.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-              canvas.width = canvas.height = 0;
+              NgxAdvancedImgCanvasHelper.returnCanvas(canvas);
               canvas = null;
             }
 
@@ -884,7 +889,7 @@ export class NgxAdvancedImgBitmap {
         }
 
         // draw the image to the canvas
-        let canvas: HTMLCanvasElement | null = document.createElement('canvas');
+        let canvas: HTMLCanvasElement | null = NgxAdvancedImgCanvasHelper.requestCanvas();
         let width: number = (canvas.width = this.image.width * resizeFactor);
         let height: number = (canvas.height = this.image.height * resizeFactor);
         let minThresholdReached = false;
@@ -959,8 +964,7 @@ export class NgxAdvancedImgBitmap {
 
         // clean up the canvas
         if (canvas) {
-          ctx?.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-          canvas.width = canvas.height = 0;
+          NgxAdvancedImgCanvasHelper.returnCanvas(canvas);
           canvas = null;
         }
 
@@ -975,10 +979,6 @@ export class NgxAdvancedImgBitmap {
           options?.sizeLimit > 0
         ) {
           const fileSize: number = Math.round(blob.size);
-
-          // if (this.debug) {
-          //   console.warn('Image Optimization Factors:', options?.mode, quality, resizeFactor, `${fileSize} B`);
-          // }
 
           if (
             fileSize > options?.sizeLimit &&
