@@ -45,7 +45,6 @@ export class NgxAdvancedImgBitmap {
   private static ITERATION_FACTOR = 0.025;
   private static QUALITY_FACTOR = 0.5;
   private static PREDICTION_FACTOR = 0.275; // how much we scale back our quality prediction since the mathematical function is not perfect
-  private static SYSTEM_CANVAS: HTMLCanvasElement | undefined;
 
   public resolution: NgxAdvancedImgResolution;
   public revision: number;
@@ -360,13 +359,15 @@ export class NgxAdvancedImgBitmap {
    * @param mimeType The mimeType to check for support.
    */
   public static isMimeTypeSupported(mimeType: string): boolean {
-    this.SYSTEM_CANVAS = this.SYSTEM_CANVAS || NgxAdvancedImgCanvasHelper.requestCanvas();
+    const canvas = NgxAdvancedImgCanvasHelper.requestCanvas();
+    let isMimeTypeSupported = false;
 
-    if (this.SYSTEM_CANVAS.getContext && this.SYSTEM_CANVAS.getContext('2d')) {
-      return this.SYSTEM_CANVAS.toDataURL(mimeType).indexOf(`data:${mimeType}`) === 0;
+    if (canvas?.getContext && canvas.getContext('2d')) {
+      isMimeTypeSupported = canvas.toDataURL(mimeType).indexOf(`data:${mimeType}`) === 0;
+      NgxAdvancedImgCanvasHelper.returnCanvas(canvas);
     }
 
-    return false;
+    return isMimeTypeSupported;
   }
 
   /*

@@ -5,6 +5,7 @@ import {
   INgxAdvancedImgBitmapOptimization,
   INgxAdvancedImgHeicConversion,
   NgxAdvancedImgBitmap,
+  NgxAdvancedImgCanvasHelper,
   NgxAdvancedImgFallbackDirective,
 } from '../../projects/ngx-advanced-img/src/public-api';
 
@@ -201,6 +202,10 @@ export class AppComponent {
                     this.prettyLog([`Image load took ${loadMeasure.duration} ms`]);
                     this.prettyLog([`${mimeType} optimization took ${optimizationMeasure.duration} ms`]);
                     this.prettyLog([`${mimeType} saving took ${saveMeasure.duration} ms`]);
+                    this.prettyLog(['']);
+                    this.prettyLog([
+                      `At this time, ${NgxAdvancedImgCanvasHelper.getCanvasCount()} canvases have been allocated.`,
+                    ]);
                     this.prettyLog(['']);
 
                     // reset performance
