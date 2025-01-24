@@ -188,7 +188,7 @@ export class AppComponent {
 
                     performance.mark('save_start');
                     bitmap.saveFile(
-                      `test_output_${AppComponent.getFileNameWithoutExtension(file)} _q - ${this.quality} _m - ${this.mode} _s - ${this.size} `,
+                      `test_output_${AppComponent.getFileNameWithoutExtension(file)}_q-${this.quality}_m-${this.mode}_s-${this.size}`,
                       data.blob,
                       mimeType
                     );
