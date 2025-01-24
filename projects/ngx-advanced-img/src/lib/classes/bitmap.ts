@@ -410,12 +410,20 @@ export class NgxAdvancedImgBitmap {
       });
     }
 
+    const domURL: any = URL || webkitURL || window.URL;
+
     this.ttl = 0;
     this.loaded = false;
     this.loadedAt = null;
     if (this.image) {
       this.image.onload = null;
       this.image.onerror = null;
+
+      try {
+        domURL?.revokeObjectURL(this.image.src);
+      } catch (error) {
+        console.error('An error occurred while cleaning up resources.', error);
+      }
     }
     this.image = null;
     this.size = 0;
@@ -430,8 +438,6 @@ export class NgxAdvancedImgBitmap {
       this._destroyed?.unsubscribe();
       this._destroyed = null;
     }
-
-    const domURL: any = URL || webkitURL || window.URL;
 
     // clear any existing object urls as necessary
     if (this._objectURL) {
