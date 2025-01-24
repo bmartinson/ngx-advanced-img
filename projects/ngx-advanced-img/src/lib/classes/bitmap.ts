@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as exif from 'exifr';
 import mime from 'mime';
 import { Observable, Subject } from 'rxjs';
 
 import { NgxAdvancedImgCanvasHelper } from './canvas-helper';
-import { NgxAdvancedImgHeicConverter } from './heic-converter';
 import { NgxAdvancedImgJxon } from './jxon';
 
 import Timeout = NodeJS.Timeout;
@@ -48,12 +48,12 @@ export class NgxAdvancedImgBitmap {
   private static SYSTEM_CANVAS: HTMLCanvasElement | undefined;
 
   public resolution: NgxAdvancedImgResolution;
-  public src: string | Blob;
   public revision: number;
   public loaded: boolean;
   public image: HTMLImageElement | undefined | null;
   public size: number;
   public debug: boolean; // set to true for console logging
+  private _src: string | Blob;
   private _ttl: number; // time to live in seconds after it has been loaded
   private loadedAt: Date | null;
   private expirationClock: Timeout | null;
@@ -66,6 +66,24 @@ export class NgxAdvancedImgBitmap {
   private _initialFileSize: number;
 
   /**
+   * The source of the image that will be loaded. When setting the source,
+   * the rest of the class will be reset, akin to a call to destroy(true).
+   */
+  public get src(): string | Blob {
+    return this._src;
+  }
+
+  /**
+   * The source of the image that will be loaded. When setting the source,
+   * the rest of the class will be reset, akin to a call to destroy(true).
+   */
+  public set src(value: string | Blob) {
+    this.destroy(true);
+
+    this._src = value;
+  }
+
+  /**
    * The object URL format of the image that can be used for direct downloading to an end-user's machine.
    */
   public get objectURL(): string {
@@ -75,7 +93,7 @@ export class NgxAdvancedImgBitmap {
   /**
    * The exif data associated with the image.
    */
-  public get exifData(): any {
+  public get exifData(): object {
     return this._exifData || {};
   }
 
@@ -132,7 +150,7 @@ export class NgxAdvancedImgBitmap {
    * Returns the time, in seconds, for which this asset has lived since it was first loaded.
    */
   public get life(): number {
-    if (!this.loadedAt || !this.src) {
+    if (!this.loadedAt || !this._src) {
       return 0;
     }
 
@@ -204,7 +222,7 @@ export class NgxAdvancedImgBitmap {
   }
 
   public constructor(src: string | Blob, resolution: NgxAdvancedImgResolution, revision: number, ttl?: number) {
-    this.src = src ? src : '';
+    this._src = src ? src : '';
     this.resolution = resolution !== null && resolution !== undefined ? resolution : '';
     this.revision = revision ? revision : 0;
     this.loaded = false;
@@ -383,7 +401,7 @@ export class NgxAdvancedImgBitmap {
     // announce the disposal of this
     if (!silent) {
       this._destroyed?.next({
-        src: this.src,
+        src: this._src,
         revision: this.revision,
         resolution: this.resolution,
         loaded: this.loaded,
@@ -412,7 +430,6 @@ export class NgxAdvancedImgBitmap {
       this._destroyed = null;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const domURL: any = URL || webkitURL || window.URL;
 
     // clear any existing object urls as necessary
@@ -434,15 +451,15 @@ export class NgxAdvancedImgBitmap {
    */
   public async load(anonymous = true, allowXMLLoading = true, fullQualityLoad = false): Promise<NgxAdvancedImgBitmap> {
     // if no valid source, then reject the load
-    if (!this.src) {
+    if (!this._src) {
       return Promise.reject(new Error('No valid source provided'));
     }
 
-    if (typeof this.src === 'string') {
-      this.src = NgxAdvancedImgBitmap.dataURItoBlob(this.src);
+    if (typeof this._src === 'string') {
+      this._src = NgxAdvancedImgBitmap.dataURItoBlob(this._src);
     }
 
-    const blobData: Blob = this.src;
+    const blobData: Blob = this._src;
 
     this.destroy(true);
 
@@ -538,7 +555,7 @@ export class NgxAdvancedImgBitmap {
             // if we haven't loaded anonymously, we'll taint the canvas and crash the application
             const dataUri: string = anonymous ? canvas.toDataURL(this._mimeType, fullQualityLoad ? 1 : undefined) : '';
 
-            if (typeof this.src === 'string') {
+            if (typeof this._src === 'string') {
               // store the exif data
               exif.parse(blobData, true).then((exifData: any) => {
                 this._exifData = exifData || {};
@@ -678,8 +695,8 @@ export class NgxAdvancedImgBitmap {
 
         // calculate a unique revision signature to ensure we pull the image with the correct CORS headers
         let rev = '';
-        if (this.revision >= 0 && typeof this.src === 'string' && this.src.indexOf('base64') === -1) {
-          if (this.src.indexOf('?') >= 0) {
+        if (this.revision >= 0 && typeof this._src === 'string' && this._src.indexOf('base64') === -1) {
+          if (this._src.indexOf('?') >= 0) {
             rev = '&rev=' + this.revision;
           } else {
             rev = '?rev=' + this.revision;
@@ -687,13 +704,13 @@ export class NgxAdvancedImgBitmap {
         }
 
         // create a properly configured url despite protocol - make sure any resolution data is cleared
-        if (typeof this.src === 'string') {
+        if (typeof this._src === 'string') {
           if (this.resolution === '') {
             // distinct loads should take the direct source url
-            url = this.src;
+            url = this._src;
           } else {
             // clear resolution information if provided for situations where we intend to use some resolution
-            url = this.src.replace(/_(.*)/g, '');
+            url = this._src.replace(/_(.*)/g, '');
           }
 
           // append resolution and revision information for all scenarios if provided
@@ -702,13 +719,13 @@ export class NgxAdvancedImgBitmap {
           // load the image
           this.image.src = url;
         } else {
-          this.image.src = URL.createObjectURL(this.src);
+          this.image.src = URL.createObjectURL(this._src);
 
           // store the original blob file size
-          this._initialFileSize = this.src.size;
+          this._initialFileSize = this._src.size;
 
           // parse the exif data direction while the image content loads
-          exif.parse(this.src, true).then((exifData: any) => {
+          exif.parse(this._src, true).then((exifData: any) => {
             this._exifData = exifData || {};
           });
         }
@@ -835,6 +852,7 @@ export class NgxAdvancedImgBitmap {
     lastOp?: 'quality' | 'scale' | undefined,
     lastSize?: number
   ): Promise<INgxAdvancedImgBitmapOptimization> {
+    // eslint-disable-next-line no-async-promise-executor
     return new Promise(async (resolve: (value: INgxAdvancedImgBitmapOptimization) => void, reject) => {
       try {
         if (!this.image || !this.loaded) {

@@ -118,6 +118,8 @@ export class AppComponent {
       defaultMimeType = 'image/jpeg';
     }
 
+    let bitmap: NgxAdvancedImgBitmap | null = null;
+
     this.imageFiles.forEach(async (file: File) => {
       if (file) {
         // convert heic to jpeg
@@ -133,14 +135,31 @@ export class AppComponent {
           }
         }
         // Implement image processing logic here
-        const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(src, '', 0, 0);
-        bitmap.debug = true;
+        if (bitmap == null) {
+          bitmap = new NgxAdvancedImgBitmap(src, '', 0, 0);
+          bitmap.debug = true;
+        } else {
+          bitmap.src = src;
+        }
 
         NgxAdvancedImgBitmap.getImageDataFromBlob(file as Blob)
           .then((unOptimizedData: INgxAdvancedImgBitmapInfo) => {
+            if (!bitmap) {
+              this.prettyLog(['~~~ The bitmap has been destroyed!'], 'error');
+              return;
+            }
+
             if (unOptimizedData.fileSize > this.size) {
               performance.mark('load_start');
               bitmap.load().finally(() => {
+                if (!bitmap) {
+                  this.prettyLog(['~~~ The bitmap has been destroyed!'], 'error');
+
+                  performance.clearMarks();
+                  performance.clearMeasures();
+                  return;
+                }
+
                 const mimeType: string = this.retainMimeType ? bitmap.mimeType : defaultMimeType;
 
                 performance.mark('load_end');
@@ -180,6 +199,14 @@ export class AppComponent {
                     strict: !!this.strictMode,
                   })
                   .then((data: INgxAdvancedImgBitmapOptimization) => {
+                    if (!bitmap) {
+                      this.prettyLog(['~~~ The bitmap has been destroyed!'], 'error');
+
+                      performance.clearMarks();
+                      performance.clearMeasures();
+                      return;
+                    }
+
                     performance.mark('optimization_end');
                     performance.measure('Image Optimization', 'optimization_start', 'optimization_end');
 
