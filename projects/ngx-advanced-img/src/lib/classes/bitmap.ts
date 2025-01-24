@@ -51,13 +51,13 @@ export class NgxAdvancedImgBitmap {
   public src: string | Blob;
   public revision: number;
   public loaded: boolean;
-  public image: HTMLImageElement | undefined;
+  public image: HTMLImageElement | undefined | null;
   public size: number;
   public debug: boolean; // set to true for console logging
   private _ttl: number; // time to live in seconds after it has been loaded
   private loadedAt: Date | null;
   private expirationClock: Timeout | null;
-  private _destroyed: Subject<INgxAdvancedImgBitmapDataSignature> | undefined;
+  private _destroyed: Subject<INgxAdvancedImgBitmapDataSignature> | undefined | null;
   private _objectURL: string;
   private _exifData: any;
   private _mimeType: string;
@@ -76,7 +76,7 @@ export class NgxAdvancedImgBitmap {
    * The exif data associated with the image.
    */
   public get exifData(): any {
-    return this._exifData;
+    return this._exifData || {};
   }
 
   /**
@@ -217,7 +217,6 @@ export class NgxAdvancedImgBitmap {
     this._mimeType = 'unknown';
     this._objectURL = '';
     this._fileSize = this._initialFileSize = 0;
-    this._exifData = {}; // prevent failure when using JSON.parse on undefined
     this.debug = false;
   }
 
@@ -352,45 +351,6 @@ export class NgxAdvancedImgBitmap {
     return false;
   }
 
-  /**
-   * Converts a ImageData object to a Blob
-   * @param imageData Pixel data to convert to a Blob
-   * @param mimeType The mimetype of the resulting blob
-   * @param quality The quality of the resulting conversion
-   * @returns
-   */
-  private static imageDataToBlob(imageData: ImageData, mimeType: string, quality: number): Promise<Blob> {
-    return new Promise((resolve, reject) => {
-      const canvas: HTMLCanvasElement = NgxAdvancedImgCanvasHelper.requestCanvas();
-      canvas.width = imageData.width;
-      canvas.height = imageData.height;
-
-      const ctx = canvas.getContext('2d');
-
-      if (!ctx) {
-        throw new Error('Could not get 2d context');
-      }
-
-      ctx.putImageData(imageData, 0, 0);
-
-      canvas.toBlob(
-        (blob: Blob | null) => {
-          if (canvas) {
-            NgxAdvancedImgCanvasHelper.returnCanvas(canvas);
-          }
-
-          if (!blob) {
-            return reject('ERR_CANVAS Error on converting imagedata to blob: Could not get blob from canvas');
-          }
-
-          return resolve(blob);
-        },
-        mimeType,
-        quality
-      );
-    });
-  }
-
   /*
    * Helper function to get the image data from a canvas
    */
@@ -416,16 +376,20 @@ export class NgxAdvancedImgBitmap {
 
   /**
    * Destroys the current asset bitmap object and frees all memory in use.
+   *
+   * @param silent Set to true if you would like to destroy everything but the destroyed observable so that the object will be reused.
    */
-  public destroy(): void {
+  public destroy(silent?: boolean): void {
     // announce the disposal of this
-    this._destroyed?.next({
-      src: this.src,
-      revision: this.revision,
-      resolution: this.resolution,
-      loaded: this.loaded,
-      size: this.size,
-    });
+    if (!silent) {
+      this._destroyed?.next({
+        src: this.src,
+        revision: this.revision,
+        resolution: this.resolution,
+        loaded: this.loaded,
+        size: this.size,
+      });
+    }
 
     this.ttl = 0;
     this.loaded = false;
@@ -434,11 +398,21 @@ export class NgxAdvancedImgBitmap {
       this.image.onload = null;
       this.image.onerror = null;
     }
-    this.image = undefined;
+    this.image = null;
     this.size = 0;
-    this._destroyed?.unsubscribe();
-    this._destroyed = undefined;
+    this._initialFileSize = 0;
+    this._exifData = null;
 
+    if (this.expirationClock) {
+      clearTimeout(this.expirationClock);
+    }
+
+    if (!silent) {
+      this._destroyed?.unsubscribe();
+      this._destroyed = null;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const domURL: any = URL || webkitURL || window.URL;
 
     // clear any existing object urls as necessary
@@ -470,10 +444,10 @@ export class NgxAdvancedImgBitmap {
 
     const blobData: Blob = this.src;
 
-    // if we have an expiration clock ticking, clear it
-    if (this.expirationClock) {
-      clearTimeout(this.expirationClock);
-    }
+    this.destroy(true);
+
+    // re-init exif data for use
+    this._exifData = {};
 
     return new Promise((resolve, reject) => {
       let url: string;
@@ -515,21 +489,6 @@ export class NgxAdvancedImgBitmap {
 
         const buffer: Uint8Array = new Uint8Array((event.target as any).result);
         this._mimeType = NgxAdvancedImgBitmap.detectMimeType(buffer, blobData.type);
-
-        // convert heic to jpeg if needed
-        if (this._mimeType === 'image/heic') {
-          console.log('Converting HEIC to JPEG without web worker');
-          try {
-            const imageData = await NgxAdvancedImgHeicConverter.decodeHeic(buffer);
-
-            // preserve quality settings used in heic2any
-            this.src = (await NgxAdvancedImgBitmap.imageDataToBlob(imageData, 'image/jpeg', 0.92)) as Blob;
-
-            this._mimeType = this.src.type;
-          } catch (e) {
-            console.error('Unable to convert HEIC to JPEG within bitmap.ts', e);
-          }
-        }
 
         // wait for image load
 
