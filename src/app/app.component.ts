@@ -120,6 +120,10 @@ export class AppComponent {
       defaultMimeType = 'image/jpeg';
     }
 
+    // clean up performance to measure the new file jobs
+    performance.clearMarks();
+    performance.clearMeasures();
+
     this.imageFiles.forEach(async (file: File) => {
       if (file) {
         // convert heic to jpeg
@@ -176,6 +180,7 @@ export class AppComponent {
                 ]);
 
                 performance.mark(`optimization_start_${jobUUID}`);
+
                 bitmap
                   .optimize(mimeType, +this.quality, +this.scale / 100, +this.maxDimension, {
                     sizeLimit: this.size ? +this.size : undefined,
@@ -236,10 +241,6 @@ export class AppComponent {
                       `At this time, ${NgxAdvancedImgCanvasHelper.getCanvasCount()} canvases have been allocated.`,
                     ]);
                     this.prettyLog(['']);
-
-                    // reset performance
-                    performance.clearMarks();
-                    performance.clearMeasures();
 
                     // clean up the bitmap
                     bitmap.destroy();
