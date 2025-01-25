@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { v4 as uuidv4 } from 'uuid';
 
 import {
   INgxAdvancedImgBitmapInfo,
@@ -133,6 +134,9 @@ export class AppComponent {
             this.prettyLog(['Unable to convert HEIC with web worker', error], 'error');
           }
         }
+
+        const jobUUID: string = uuidv4();
+
         // Implement image processing logic here
         const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(src, '', 0, 0);
         bitmap.debug = true;
@@ -140,12 +144,12 @@ export class AppComponent {
         NgxAdvancedImgBitmap.getImageDataFromBlob(file as Blob)
           .then((unOptimizedData: INgxAdvancedImgBitmapInfo) => {
             if (unOptimizedData.fileSize > this.size) {
-              performance.mark('load_start');
+              performance.mark(`load_start_${jobUUID}`);
               bitmap.load().finally(() => {
                 const mimeType: string = this.retainMimeType ? bitmap.mimeType : defaultMimeType;
 
-                performance.mark('load_end');
-                performance.measure('Image Load', 'load_start', 'load_end');
+                performance.mark(`load_end_${jobUUID}`);
+                performance.measure(`Image Load`, `load_start_${jobUUID}`, `load_end_${jobUUID}`);
 
                 this.prettyLog(['bitmap loaded with size (B):', bitmap.fileSize]);
 
@@ -170,7 +174,7 @@ export class AppComponent {
                   !!this.strictMode,
                 ]);
 
-                performance.mark('optimization_start');
+                performance.mark(`optimization_start_${jobUUID}`);
                 bitmap
                   .optimize(mimeType, +this.quality, +this.scale / 100, +this.maxDimension, {
                     sizeLimit: this.size ? +this.size : undefined,
@@ -181,20 +185,24 @@ export class AppComponent {
                     strict: !!this.strictMode,
                   })
                   .then((data: INgxAdvancedImgBitmapOptimization) => {
-                    performance.mark('optimization_end');
-                    performance.measure('Image Optimization', 'optimization_start', 'optimization_end');
+                    performance.mark(`optimization_end_${jobUUID}`);
+                    performance.measure(
+                      `Image Optimization`,
+                      `optimization_start_${jobUUID}`,
+                      `optimization_end_${jobUUID}`
+                    );
 
                     // auto save this for the user
                     this.prettyLog(['[TEST] Saving URL:', data.blob, data.exifData, unOptimizedData.exifData]);
 
-                    performance.mark('save_start');
+                    performance.mark(`save_start_${jobUUID}`);
                     bitmap.saveFile(
                       `test_output_${AppComponent.getFileNameWithoutExtension(file)}_q-${this.quality}_m-${this.mode}_s-${this.size}`,
                       data.blob,
                       mimeType
                     );
-                    performance.mark('save_end');
-                    performance.measure('Image Saving', 'save_start', 'save_end');
+                    performance.mark(`save_end_${jobUUID}`);
+                    performance.measure(`Image Saving`, `save_start_${jobUUID}`, `save_end_${jobUUID}`);
 
                     const loadMeasure = performance.getEntriesByName('Image Load')[0];
                     const optimizationMeasure = performance.getEntriesByName('Image Optimization')[0];
