@@ -87,13 +87,18 @@ export class NgxAdvancedImgCanvasHelper {
    * static memory pool to the minimum number it can by removing available canvases.
    *
    * If canvases are actively in use, they will be exempt from the release process.
+   *
+   * @param limit The maximum number of canvases to reduce to. If not provided, the limit will be the batch allocation amount.
    */
-  public static reducePool(): void {
+  public static reducePool(limit?: number): void {
     let canvas: HTMLCanvasElement | undefined | null = null;
 
-    while (
-      NgxAdvancedImgCanvasHelper.AVAILABLE_CANVASES.length > NgxAdvancedImgCanvasHelper.CANVAS_BATCH_ALLOCATION_AMOUNT
-    ) {
+    if (!limit || limit < 0) {
+      // default to the batch limit
+      limit = NgxAdvancedImgCanvasHelper.CANVAS_BATCH_ALLOCATION_AMOUNT;
+    }
+
+    while (NgxAdvancedImgCanvasHelper.AVAILABLE_CANVASES.length > limit) {
       canvas = NgxAdvancedImgCanvasHelper.AVAILABLE_CANVASES.pop();
 
       if (canvas) {

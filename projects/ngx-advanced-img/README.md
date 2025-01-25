@@ -172,6 +172,24 @@ ctx?.drawImage(image, 0, 0, canvas.width, canvas.height);
 
 // once done working with the canvas, return it to the pool...
 NgxAdvancedImgCanvasHelper.returnCanvas(canvas);
+
+// ...
+
+/**
+ *
+ * Reduce your pool of available canvases on demand to the batch limit
+ *
+ * You really only really need to do this if your implementation is getting
+ * really big and you're not actively re-using canvases very well.
+ *
+ * For example, perhaps your canvas pool processes a large spike in workload.
+ * You don't want to keep the max number of canvases around for reuse because
+ * you won't regularly use them. So, you call this to deflate it back down.
+ * Pass in an optional number to reduce to that. This way you can reduce
+ * to your expected average workload perhaps.
+ *
+ */
+NgxAdvancedImgCanvasHelper.reducePool();
 ```
 
 **Important Note**
