@@ -129,6 +129,7 @@ export class AppComponent {
             const result = await this.workerConvert(file, this.retainMimeType ? 'image/jpeg' : defaultMimeType);
 
             src = result.blob;
+
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } catch (error: any) {
             this.prettyLog(['Unable to convert HEIC with web worker', error], 'error');
@@ -185,12 +186,16 @@ export class AppComponent {
                     strict: !!this.strictMode,
                   })
                   .then((data: INgxAdvancedImgBitmapOptimization) => {
-                    performance.mark(`optimization_end_${jobUUID}`);
-                    performance.measure(
-                      `Image Optimization`,
-                      `optimization_start_${jobUUID}`,
-                      `optimization_end_${jobUUID}`
-                    );
+                    try {
+                      performance.mark(`optimization_end_${jobUUID}`);
+                      performance.measure(
+                        `Image Optimization`,
+                        `optimization_start_${jobUUID}`,
+                        `optimization_end_${jobUUID}`
+                      );
+                    } catch (e) {
+                      console.error(e);
+                    }
 
                     // auto save this for the user
                     this.prettyLog(['[TEST] Saving URL:', data.blob, data.exifData, unOptimizedData.exifData]);
@@ -201,15 +206,31 @@ export class AppComponent {
                       data.blob,
                       mimeType
                     );
-                    performance.mark(`save_end_${jobUUID}`);
-                    performance.measure(`Image Saving`, `save_start_${jobUUID}`, `save_end_${jobUUID}`);
+                    try {
+                      performance.mark(`save_end_${jobUUID}`);
+                      performance.measure(`Image Saving`, `save_start_${jobUUID}`, `save_end_${jobUUID}`);
+                    } catch (e) {
+                      console.error(e);
+                    }
 
                     const loadMeasure = performance.getEntriesByName('Image Load')[0];
                     const optimizationMeasure = performance.getEntriesByName('Image Optimization')[0];
                     const saveMeasure = performance.getEntriesByName('Image Saving')[0];
-                    this.prettyLog([`Image load took ${loadMeasure.duration} ms`]);
-                    this.prettyLog([`${mimeType} optimization took ${optimizationMeasure.duration} ms`]);
-                    this.prettyLog([`${mimeType} saving took ${saveMeasure.duration} ms`]);
+                    try {
+                      this.prettyLog([`Image load took ${loadMeasure.duration} ms`]);
+                    } catch (e) {
+                      console.error(e);
+                    }
+                    try {
+                      this.prettyLog([`${mimeType} optimization took ${optimizationMeasure.duration} ms`]);
+                    } catch (e) {
+                      console.error(e);
+                    }
+                    try {
+                      this.prettyLog([`${mimeType} saving took ${saveMeasure.duration} ms`]);
+                    } catch (e) {
+                      console.error(e);
+                    }
                     this.prettyLog(['']);
                     this.prettyLog([
                       `At this time, ${NgxAdvancedImgCanvasHelper.getCanvasCount()} canvases have been allocated.`,
