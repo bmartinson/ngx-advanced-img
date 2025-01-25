@@ -124,15 +124,22 @@ export class AppComponent {
     performance.clearMarks();
     performance.clearMeasures();
 
+    // track optimization jobs for e2e and perform memory cleanup after
+    const jobs: Promise<void>[] = [];
+
     this.imageFiles.forEach(async (file: File) => {
       if (file) {
         // convert heic to jpeg
         let src: Blob = file;
         if (file.type === 'image/heic') {
           try {
-            const result = await this.workerConvert(file, this.retainMimeType ? 'image/jpeg' : defaultMimeType);
+            let result: INgxAdvancedImgHeicConversion | null = await this.workerConvert(
+              file,
+              this.retainMimeType ? 'image/jpeg' : defaultMimeType
+            );
 
             src = result.blob;
+            result = null;
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } catch (error: any) {
@@ -142,118 +149,142 @@ export class AppComponent {
 
         const jobUUID: string = uuidv4();
 
-        // Implement image processing logic here
-        const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(src, '', 0, 0);
-        bitmap.debug = true;
+        jobs.push(
+          new Promise<void>((resolve: () => void, reject: (reason?: string | Error) => void) => {
+            const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(src, '', 0, 0);
+            bitmap.debug = true;
 
-        NgxAdvancedImgBitmap.getImageDataFromBlob(file as Blob)
-          .then((unOptimizedData: INgxAdvancedImgBitmapInfo) => {
-            if (unOptimizedData.fileSize > this.size) {
-              performance.mark(`load_start_${jobUUID}`);
-              bitmap.load().finally(() => {
-                const mimeType: string = this.retainMimeType ? bitmap.mimeType : defaultMimeType;
+            NgxAdvancedImgBitmap.getImageDataFromBlob(file as Blob)
+              .then((unOptimizedData: INgxAdvancedImgBitmapInfo) => {
+                if (unOptimizedData.fileSize > this.size) {
+                  performance.mark(`load_start_${jobUUID}`);
+                  bitmap.load().finally(() => {
+                    const mimeType: string = this.retainMimeType ? bitmap.mimeType : defaultMimeType;
 
-                performance.mark(`load_end_${jobUUID}`);
-                performance.measure(`Image Load`, `load_start_${jobUUID}`, `load_end_${jobUUID}`);
+                    performance.mark(`load_end_${jobUUID}`);
+                    performance.measure(`Image Load`, `load_start_${jobUUID}`, `load_end_${jobUUID}`);
 
-                this.prettyLog(['bitmap loaded with size (B):', bitmap.fileSize]);
+                    this.prettyLog(['bitmap loaded with size (B):', bitmap.fileSize]);
 
-                // compress the image to a smaller file size
-                this.prettyLog([`Optimizing ${file.name}...`]);
-                this.prettyLog([
-                  'Quality:',
-                  String(),
-                  'Type:',
-                  mimeType,
-                  'Initial Size (B):',
-                  bitmap.initialFileSize,
-                  'Loaded File Size (B):',
-                  bitmap.fileSize,
-                  'Size Limit (B):',
-                  this.size,
-                  'Dimension Limit (pixels):',
-                  this.maxDimension,
-                  'Resize Factor',
-                  this.scale / 100,
-                  'Strict Mode:',
-                  !!this.strictMode,
-                ]);
-
-                performance.mark(`optimization_start_${jobUUID}`);
-
-                bitmap
-                  .optimize(mimeType, +this.quality, +this.scale / 100, +this.maxDimension, {
-                    sizeLimit: this.size ? +this.size : undefined,
-                    minDimension: 100,
-                    minScale: 0.025,
-                    minQuality: 0.8,
-                    mode: this.mode,
-                    strict: !!this.strictMode,
-                  })
-                  .then((data: INgxAdvancedImgBitmapOptimization) => {
-                    try {
-                      performance.mark(`optimization_end_${jobUUID}`);
-                      performance.measure(
-                        `Image Optimization`,
-                        `optimization_start_${jobUUID}`,
-                        `optimization_end_${jobUUID}`
-                      );
-                    } catch (e) {
-                      console.error(e);
-                    }
-
-                    // auto save this for the user
-                    this.prettyLog(['[TEST] Saving URL:', data.blob, data.exifData, unOptimizedData.exifData]);
-
-                    performance.mark(`save_start_${jobUUID}`);
-                    bitmap.saveFile(
-                      `test_output_${AppComponent.getFileNameWithoutExtension(file)}_q-${this.quality}_m-${this.mode}_s-${this.size}`,
-                      data.blob,
-                      mimeType
-                    );
-                    try {
-                      performance.mark(`save_end_${jobUUID}`);
-                      performance.measure(`Image Saving`, `save_start_${jobUUID}`, `save_end_${jobUUID}`);
-                    } catch (e) {
-                      console.error(e);
-                    }
-
-                    const loadMeasure = performance.getEntriesByName('Image Load')[0];
-                    const optimizationMeasure = performance.getEntriesByName('Image Optimization')[0];
-                    const saveMeasure = performance.getEntriesByName('Image Saving')[0];
-                    try {
-                      this.prettyLog([`Image load took ${loadMeasure.duration} ms`]);
-                    } catch (e) {
-                      console.error(e);
-                    }
-                    try {
-                      this.prettyLog([`${mimeType} optimization took ${optimizationMeasure.duration} ms`]);
-                    } catch (e) {
-                      console.error(e);
-                    }
-                    try {
-                      this.prettyLog([`${mimeType} saving took ${saveMeasure.duration} ms`]);
-                    } catch (e) {
-                      console.error(e);
-                    }
-                    this.prettyLog(['']);
+                    // compress the image to a smaller file size
+                    this.prettyLog([`Optimizing ${file.name}...`]);
                     this.prettyLog([
-                      `At this time, ${NgxAdvancedImgCanvasHelper.getCanvasCount()} canvases have been allocated.`,
+                      'Quality:',
+                      String(),
+                      'Type:',
+                      mimeType,
+                      'Initial Size (B):',
+                      bitmap.initialFileSize,
+                      'Loaded File Size (B):',
+                      bitmap.fileSize,
+                      'Size Limit (B):',
+                      this.size,
+                      'Dimension Limit (pixels):',
+                      this.maxDimension,
+                      'Resize Factor',
+                      this.scale / 100,
+                      'Strict Mode:',
+                      !!this.strictMode,
                     ]);
-                    this.prettyLog(['']);
 
-                    // clean up the bitmap
-                    bitmap.destroy();
-                  }); // let the errors bubble up
+                    performance.mark(`optimization_start_${jobUUID}`);
+
+                    bitmap
+                      .optimize(mimeType, +this.quality, +this.scale / 100, +this.maxDimension, {
+                        sizeLimit: this.size ? +this.size : undefined,
+                        minDimension: 100,
+                        minScale: 0.025,
+                        minQuality: 0.8,
+                        mode: this.mode,
+                        strict: !!this.strictMode,
+                      })
+                      .then((data: INgxAdvancedImgBitmapOptimization) => {
+                        try {
+                          performance.mark(`optimization_end_${jobUUID}`);
+                          performance.measure(
+                            `Image Optimization`,
+                            `optimization_start_${jobUUID}`,
+                            `optimization_end_${jobUUID}`
+                          );
+                        } catch (e) {
+                          console.error(e);
+                        }
+
+                        // auto save this for the user
+                        this.prettyLog(['[TEST] Saving URL:', data.blob, data.exifData, unOptimizedData.exifData]);
+
+                        performance.mark(`save_start_${jobUUID}`);
+                        bitmap.saveFile(
+                          `test_output_${AppComponent.getFileNameWithoutExtension(file)}_q-${this.quality}_m-${this.mode}_s-${this.size}`,
+                          data.blob,
+                          mimeType
+                        );
+                        try {
+                          performance.mark(`save_end_${jobUUID}`);
+                          performance.measure(`Image Saving`, `save_start_${jobUUID}`, `save_end_${jobUUID}`);
+                        } catch (e) {
+                          console.error(e);
+                        }
+
+                        const loadMeasure = performance.getEntriesByName('Image Load')[0];
+                        const optimizationMeasure = performance.getEntriesByName('Image Optimization')[0];
+                        const saveMeasure = performance.getEntriesByName('Image Saving')[0];
+                        try {
+                          this.prettyLog([`Image load took ${loadMeasure.duration} ms`]);
+                        } catch (e) {
+                          console.error(e);
+                        }
+                        try {
+                          this.prettyLog([`${mimeType} optimization took ${optimizationMeasure.duration} ms`]);
+                        } catch (e) {
+                          console.error(e);
+                        }
+                        try {
+                          this.prettyLog([`${mimeType} saving took ${saveMeasure.duration} ms`]);
+                        } catch (e) {
+                          console.error(e);
+                        }
+                        this.prettyLog(['']);
+                        this.prettyLog([
+                          `At this time, ${NgxAdvancedImgCanvasHelper.getCanvasCount()} canvases have been allocated.`,
+                        ]);
+                        this.prettyLog(['']);
+
+                        // clean up the bitmap
+                        bitmap.destroy();
+
+                        resolve();
+                      }); // let the errors bubble up
+                  });
+                } else {
+                  this.prettyLog(['~~~ No optimization is needed, your file is already small enough!'], 'warn');
+                }
+              })
+              .catch(e => {
+                this.prettyLog(['Unable to get image data from blob:', e], 'error');
+
+                reject(e);
               });
-            } else {
-              this.prettyLog(['~~~ No optimization is needed, your file is already small enough!'], 'warn');
-            }
           })
-          .catch(e => {
-            this.prettyLog(['Unable to get image data from blob:', e], 'error');
-          });
+        );
       }
+    });
+
+    Promise.all(jobs).then(() => {
+      // clean up jobs list
+      jobs.length = 0;
+
+      // reduce the canvas memory pool
+      // NgxAdvancedImgCanvasHelper.reducePool();
+
+      // clean up performance to measure the new file jobs
+      performance.clearResourceTimings();
+      performance.clearMarks();
+      performance.clearMeasures();
+
+      this.prettyLog([
+        `Memory pool reduced. At this time, ${NgxAdvancedImgCanvasHelper.getCanvasCount()} canvases have been allocated.`,
+      ]);
     });
   }
 
@@ -261,15 +292,18 @@ export class AppComponent {
     return new Promise((resolve, reject) => {
       const id = (Math.random() * new Date().getTime()).toString();
       const message = { id, file, mimeType };
+
+      let worker: Worker | null = new Worker(new URL('./app.worker', import.meta.url), { type: `module` });
+
       console.log('sending message to worker', import.meta.url);
-      const worker = new Worker(new URL('./app.worker', import.meta.url), { type: `module` });
       worker.postMessage(message);
 
       const listener = (message: MessageEvent) => {
-        worker.removeEventListener('message', listener);
+        worker?.removeEventListener('message', listener);
 
         // destroy worker
-        worker.terminate();
+        worker?.terminate();
+        worker = null;
 
         if (message.data instanceof Error) {
           reject(message.data);
@@ -283,7 +317,8 @@ export class AppComponent {
       worker.onerror = error => {
         console.log(`Worker error: ${error}`);
 
-        worker.terminate();
+        worker?.terminate();
+        worker = null;
 
         reject(error);
       };

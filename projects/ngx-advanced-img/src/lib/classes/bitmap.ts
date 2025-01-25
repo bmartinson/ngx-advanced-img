@@ -57,7 +57,7 @@ export class NgxAdvancedImgBitmap {
   private loadedAt: Date | null;
   private expirationClock: Timeout | null;
   private _destroyed: Subject<INgxAdvancedImgBitmapDataSignature> | undefined | null;
-  private _objectURL: string;
+  private _objectURL: string | null;
   private _exifData: any;
   private _mimeType: string;
   private _orientation: number;
@@ -86,7 +86,7 @@ export class NgxAdvancedImgBitmap {
    * The object URL format of the image that can be used for direct downloading to an end-user's machine.
    */
   public get objectURL(): string {
-    return this._objectURL;
+    return this._objectURL || '';
   }
 
   /**
@@ -443,6 +443,7 @@ export class NgxAdvancedImgBitmap {
     if (this._objectURL) {
       try {
         domURL?.revokeObjectURL(this._objectURL);
+        this._objectURL = null;
       } catch (error) {
         console.error('An error occurred while cleaning up resources.', error);
       }
@@ -501,7 +502,7 @@ export class NgxAdvancedImgBitmap {
         this.expirationClock = setTimeout(this.onExpired.bind(this), this.ttl * 1000);
       }
 
-      const fileReader: FileReader = new FileReader();
+      let fileReader: FileReader | null = new FileReader();
 
       // when the file reader successfully loads array buffers, process them
       fileReader.onload = async (event: Event) => {
@@ -736,10 +737,22 @@ export class NgxAdvancedImgBitmap {
             this._exifData = exifData || {};
           });
         }
+
+        if (fileReader) {
+          fileReader.onload = null;
+          fileReader.onerror = null;
+          fileReader = null;
+        }
       };
 
       // if we fail to load the file header data, throw an error to be captured by the promise catch
       fileReader.onerror = () => {
+        if (fileReader) {
+          fileReader.onload = null;
+          fileReader.onerror = null;
+          fileReader = null;
+        }
+
         throw new Error("Couldn't read file header for download");
       };
 
@@ -798,7 +811,7 @@ export class NgxAdvancedImgBitmap {
     }
 
     // create a link and set it into the DOM for programmatic use
-    const link: HTMLAnchorElement = document.createElement('a');
+    let link: HTMLAnchorElement | null = document.createElement('a');
     link.setAttribute('type', 'hidden');
     link.setAttribute('href', url);
     link.setAttribute('target', '_blank');
@@ -811,6 +824,8 @@ export class NgxAdvancedImgBitmap {
     // clean up the download operation
     domURL.revokeObjectURL(url);
     document.body.removeChild(link);
+
+    link = null;
   }
 
   /**

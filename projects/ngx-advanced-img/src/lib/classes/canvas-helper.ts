@@ -83,6 +83,26 @@ export class NgxAdvancedImgCanvasHelper {
   }
 
   /**
+   * When called, this method will reduce the number of canvases stored in the
+   * static memory pool to the minimum number it can by removing available canvases.
+   *
+   * If canvases are actively in use, they will be exempt from the release process.
+   */
+  public static reducePool(): void {
+    let canvas: HTMLCanvasElement | undefined | null = null;
+
+    while (
+      NgxAdvancedImgCanvasHelper.AVAILABLE_CANVASES.length > NgxAdvancedImgCanvasHelper.CANVAS_BATCH_ALLOCATION_AMOUNT
+    ) {
+      canvas = NgxAdvancedImgCanvasHelper.AVAILABLE_CANVASES.pop();
+
+      if (canvas) {
+        canvas = null;
+      }
+    }
+  }
+
+  /**
    * Generates more canvases for usage.
    */
   private static allocateMoreCanvases(): void {
