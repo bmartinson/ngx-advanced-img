@@ -18,6 +18,7 @@ Angular attribute directives suite that provides various HTML img feature extens
       - [Creating Bitmap](#creating-bitmap)
       - [Optimizing Bitmaps](#optimizing-bitmaps)
   - [NgxAdvancedImgCanvasHelper](#ngxadvancedimgcanvashelper)
+  - [NgxAdvancedImgHeicConverter] (#ngxadvancedimgheicconverter)
 
 ## About This Package
 
@@ -195,3 +196,62 @@ NgxAdvancedImgCanvasHelper.reducePool();
 **Important Note**
 
 The resultant bitmap data will have all exif meta data stripped from it since the optimization procedure uses HTML5 canvas operations to manipulate the data. All exif meta data is included in the response object of the function call so that you may work with it as necessary if you are in a controlled server environment where you have reliable and efficient means for writing exif data back to images. In the browser environment, this isn't really the case without limiting our output mime types. Therefore, such considerations should be those of the wielder of this library.
+
+## NgxAdvancedImgHeicConverter
+
+This class can be used within a web worker to convert a HEIC image to a different image format using a WebAssembly version of the libheif file format decoder/encoder. This is useful when trying to optimize a HEIC image in a browser that does not support HEIC image loads.
+
+You can convert a HEIC Blob object to another mimetype by using the `convert` function.
+
+**Sample**
+```typescript
+// convert heic to jpeg before trying to load image
+let src: Blob = file;
+if (file.type === 'image/heic') {
+  try {
+    const result = await this.workerConvert(
+      file,
+      'image/jpeg'
+    );
+
+    src = result.blob;
+  } catch (error) {
+    this.prettyLog(['Unable to convert HEIC with web worker'], 'error');
+  }
+}
+
+// load and optimize decoded HEIC
+const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(src, '', 0, 0);
+// ...
+
+```
+
+**Web Worker Sample**
+```typescript
+/// <reference lib="webworker" />
+
+import { NgxAdvancedImgHeicConverter } from "../../projects/ngx-advanced-img/src/lib/classes/heic-converter";
+
+
+addEventListener('message', async ({ data }) => {
+  const file = data.file as File;
+  const mimeType = data.mimeType as string;
+
+  try {
+    const result = await NgxAdvancedImgHeicConverter.convert(file, mimeType);
+
+    postMessage(result);
+  } catch (error) {
+    console.error("Worker error:", error instanceof Error ? error.stack : error);
+
+    // Return the original error if it is an Error object, otherwise create a new one
+    const errorMessage = error instanceof Error 
+        ? error 
+        : new Error(`Worker error: ${JSON.stringify(error)}`);
+
+    postMessage(errorMessage);
+  }
+
+});
+
+```
