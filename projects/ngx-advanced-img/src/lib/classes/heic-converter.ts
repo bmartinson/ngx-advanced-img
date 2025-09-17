@@ -144,6 +144,12 @@ export class NgxAdvancedImgHeicConverter {
           // ExifReader returns tags in a slightly different format, so convert to a more similar structure
           exifData = Object.keys(exifData).reduce((acc, key) => {
             acc[key] = exifData[key].description || exifData[key].value || null;
+
+            // use numeric value for orientation
+            if (key === 'Orientation') {
+              acc[key] = exifData[key].value || 1;
+            }
+
             return acc;
           }, {} as any);
             

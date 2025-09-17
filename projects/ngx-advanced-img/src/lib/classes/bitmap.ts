@@ -508,13 +508,21 @@ export class NgxAdvancedImgBitmap {
       }
 
       // parse the exif data direction while the image content loads
-    const exifPromise = ExifReader.load(new File([blobData], `photo-${Date.now()}.heic`))
-      .then((exifData: any) => {
-          this._exifData = Object.keys(exifData).reduce((acc: { [key: string]: any }, key) => {
-          acc[key] = exifData[key].description || exifData[key].value || null;
-          return acc;
-        }, {} as { [key: string]: any }) || {};
-      });
+      const exifPromise = ExifReader.load(new File([blobData], `photo-${Date.now()}.heic`))
+        .then((exifData: any) => {
+            this._exifData = Object.keys(exifData).reduce((acc: { [key: string]: any }, key) => {
+            acc[key] = exifData[key].description || exifData[key].value || null;
+
+            // use numeric value for orientation
+            if (key === 'Orientation') {
+              acc[key] = exifData[key].value || 1;
+            }
+
+            return acc;
+          }, {} as { [key: string]: any }) || {};
+        }).catch(() => {
+          this._exifData = {};
+        });
 
       let fileReader: FileReader | null = new FileReader();
 
@@ -1244,7 +1252,7 @@ export class NgxAdvancedImgBitmap {
     }
 
     try {
-      this._orientation = this._exifData['Orientation']?.value ?? 1;
+      this._orientation = this._exifData['Orientation'] ?? 1;
     } catch (error) {
       // assume normal orientation if none can be found based on exif info
       this._orientation = 1;
