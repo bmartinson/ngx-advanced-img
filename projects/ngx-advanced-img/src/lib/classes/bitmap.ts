@@ -1,6 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import * as exif from 'exifr';
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as ExifReader from 'exifreader';
 import mime from 'mime';
 import { Observable, Subject } from 'rxjs';
@@ -249,32 +247,22 @@ export class NgxAdvancedImgBitmap {
 
     return new Promise((resolve: (value: INgxAdvancedImgBitmapInfo) => void, reject: (reason?: any) => void) => {
       // parse the exif data direction while the image content loads
-      exif
-        .parse(data, true)
+      ExifReader
+        .load(new File([data], `photo-${Date.now()}.heic`))
         .then((exifData: any) => {
+
+          exifData = Object.keys(exifData).reduce((acc: { [key: string]: any }, key) => {
+            acc[key] = exifData[key].description || exifData[key].value || null;
+            return acc;
+          }, {} as { [key: string]: any });
+          
           resolve({
             fileSize,
             exifData,
           });
+        }).catch((error: any) => {
+          reject(error);
         })
-        .catch(async (error: any) => {
-          console.warn('Failed to parse EXIF data with exifr, trying ExifReader...', error);
-          try {
-            const tags = ExifReader.load(await data.arrayBuffer());
-
-            const exifData = Object.keys(tags).reduce((acc: { [key: string]: any }, key) => {
-              acc[key] = tags[key].description;
-              return acc;
-            }, {} as { [key: string]: any });
-
-            resolve({
-              fileSize,
-              exifData,
-            });
-          } catch (error) {
-            reject(error);
-          }
-        });
     });
   }
 
@@ -582,9 +570,13 @@ export class NgxAdvancedImgBitmap {
 
             if (typeof this._src === 'string') {
               // store the exif data
-              exif.parse(blobData, true).then((exifData: any) => {
-                this._exifData = exifData || {};
-              });
+                ExifReader.load(new File([blobData], `photo-${Date.now()}.heic`))
+                  .then((exifData: any) => {
+                    this._exifData = Object.keys(exifData).reduce((acc: { [key: string]: any }, key) => {
+                    acc[key] = exifData[key].description || exifData[key].value || null;
+                    return acc;
+                    }, {} as { [key: string]: any }) || {};
+                  });
             }
 
             // if we got the bitmap data, create the link to download and invoke it
@@ -750,9 +742,13 @@ export class NgxAdvancedImgBitmap {
           this._initialFileSize = this._src.size;
 
           // parse the exif data direction while the image content loads
-          exif.parse(this._src, true).then((exifData: any) => {
-            this._exifData = exifData || {};
-          });
+            ExifReader.load(new File([this._src], `photo-${Date.now()}.heic`))
+            .then((exifData: any) => {
+              this._exifData = Object.keys(exifData).reduce((acc: { [key: string]: any }, key) => {
+              acc[key] = exifData[key].description || exifData[key].value || null;
+              return acc;
+              }, {} as { [key: string]: any }) || {};
+            });
         }
 
         if (fileReader) {
