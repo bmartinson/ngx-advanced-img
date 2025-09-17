@@ -1,4 +1,5 @@
 import * as exif from 'exifr';
+import * as ExifReader from 'exifreader';
 // @ts-ignore
 import libheif from 'libheif-js/wasm-bundle';
 
@@ -139,7 +140,27 @@ export class NgxAdvancedImgHeicConverter {
 
           const blob = await NgxAdvancedImgHeicConverter.imageDataToBlobOffscreen(imageData, mimeType, 0.92);
 
-          const exifData = await exifPromise;
+          let exifData: any = null;
+          
+          try {
+            exifData = await exifPromise;
+          } catch (error) {
+            console.warn('Failed to parse EXIF data with exifr, trying ExifReader...', error);
+          }
+
+          if (!exifData) {
+            try {
+              exifData = ExifReader.load(await src.arrayBuffer());
+
+              // ExifReader returns tags in a slightly different format, so convert to a more similar structure
+              exifData = Object.keys(exifData).reduce((acc, key) => {
+                acc[key] = exifData[key].description || exifData[key].value || null;
+                return acc;
+              }, {} as any);
+            } catch (error) {
+              throw new Error('Failed to parse EXIF data with both exifr and ExifReader');
+            }
+          }
 
           resolve({
             exifData,

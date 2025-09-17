@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as exif from 'exifr';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import * as ExifReader from 'exifreader';
 import mime from 'mime';
 import { Observable, Subject } from 'rxjs';
 
@@ -255,8 +257,23 @@ export class NgxAdvancedImgBitmap {
             exifData,
           });
         })
-        .catch((error: any) => {
-          reject(error);
+        .catch(async (error: any) => {
+          console.warn('Failed to parse EXIF data with exifr, trying ExifReader...', error);
+          try {
+            const tags = ExifReader.load(await data.arrayBuffer());
+
+            const exifData = Object.keys(tags).reduce((acc: { [key: string]: any }, key) => {
+              acc[key] = tags[key].description;
+              return acc;
+            }, {} as { [key: string]: any });
+
+            resolve({
+              fileSize,
+              exifData,
+            });
+          } catch (error) {
+            reject(error);
+          }
         });
     });
   }
