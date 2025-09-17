@@ -507,6 +507,15 @@ export class NgxAdvancedImgBitmap {
         this.expirationClock = setTimeout(this.onExpired.bind(this), this.ttl * 1000);
       }
 
+      // parse the exif data direction while the image content loads
+    const exifPromise = ExifReader.load(new File([blobData], `photo-${Date.now()}.heic`))
+      .then((exifData: any) => {
+          this._exifData = Object.keys(exifData).reduce((acc: { [key: string]: any }, key) => {
+          acc[key] = exifData[key].description || exifData[key].value || null;
+          return acc;
+        }, {} as { [key: string]: any }) || {};
+      });
+
       let fileReader: FileReader | null = new FileReader();
 
       // when the file reader successfully loads array buffers, process them
@@ -568,17 +577,6 @@ export class NgxAdvancedImgBitmap {
             // if we haven't loaded anonymously, we'll taint the canvas and crash the application
             const dataUri: string = anonymous ? canvas.toDataURL(this._mimeType, fullQualityLoad ? 1 : undefined) : '';
 
-            if (typeof this._src === 'string') {
-              // store the exif data
-                ExifReader.load(new File([blobData], `photo-${Date.now()}.heic`))
-                  .then((exifData: any) => {
-                    this._exifData = Object.keys(exifData).reduce((acc: { [key: string]: any }, key) => {
-                    acc[key] = exifData[key].description || exifData[key].value || null;
-                    return acc;
-                    }, {} as { [key: string]: any }) || {};
-                  });
-            }
-
             // if we got the bitmap data, create the link to download and invoke it
             if (dataUri) {
               // clear any existing object urls as necessary
@@ -613,7 +611,8 @@ export class NgxAdvancedImgBitmap {
               clearTimeout(this.expirationClock);
             }
 
-            await this.adjustForExifOrientation();
+            await exifPromise;
+            this.adjustForExifOrientation();
 
             // if we loaded a non-svg, then we are done loading
             resolve(this);
@@ -682,7 +681,8 @@ export class NgxAdvancedImgBitmap {
                     clearTimeout(this.expirationClock);
                   }
 
-                  await this.adjustForExifOrientation();
+                  await exifPromise;
+                  this.adjustForExifOrientation();
 
                   // the image has successfully loaded
                   resolve(this);
@@ -710,46 +710,10 @@ export class NgxAdvancedImgBitmap {
         // image load failure handler
         this.image.onerror = onerror;
 
-        // calculate a unique revision signature to ensure we pull the image with the correct CORS headers
-        let rev = '';
-        if (this.revision >= 0 && typeof this._src === 'string' && this._src.indexOf('base64') === -1) {
-          if (this._src.indexOf('?') >= 0) {
-            rev = '&rev=' + this.revision;
-          } else {
-            rev = '?rev=' + this.revision;
-          }
-        }
+        this.image.src = URL.createObjectURL(blobData);
 
-        // create a properly configured url despite protocol - make sure any resolution data is cleared
-        if (typeof this._src === 'string') {
-          if (this.resolution === '') {
-            // distinct loads should take the direct source url
-            url = this._src;
-          } else {
-            // clear resolution information if provided for situations where we intend to use some resolution
-            url = this._src.replace(/_(.*)/g, '');
-          }
-
-          // append resolution and revision information for all scenarios if provided
-          url += this.resolution + rev;
-
-          // load the image
-          this.image.src = url;
-        } else {
-          this.image.src = URL.createObjectURL(this._src);
-
-          // store the original blob file size
-          this._initialFileSize = this._src.size;
-
-          // parse the exif data direction while the image content loads
-            ExifReader.load(new File([this._src], `photo-${Date.now()}.heic`))
-            .then((exifData: any) => {
-              this._exifData = Object.keys(exifData).reduce((acc: { [key: string]: any }, key) => {
-              acc[key] = exifData[key].description || exifData[key].value || null;
-              return acc;
-              }, {} as { [key: string]: any }) || {};
-            });
-        }
+        // store the original blob file size
+        this._initialFileSize = blobData.size;
 
         if (fileReader) {
           fileReader.onload = null;
@@ -1274,13 +1238,13 @@ export class NgxAdvancedImgBitmap {
    * Helper function that adjusts the image based on any exif data indicating
    * a different orientation be performed.
    */
-  protected async adjustForExifOrientation(): Promise<void> {
+  protected adjustForExifOrientation(): void {
     if (!this.image) {
-      return Promise.reject(new Error('Image not loaded'));
+      throw new Error('Image not loaded');
     }
 
     try {
-      this._orientation = (await exif.orientation(this.image)) || 1;
+      this._orientation = this._exifData['Orientation']?.value ?? 1;
     } catch (error) {
       // assume normal orientation if none can be found based on exif info
       this._orientation = 1;
@@ -1292,8 +1256,6 @@ export class NgxAdvancedImgBitmap {
       // assume normal orientation if none can be found based on exif info
       this._orientation = 1;
     }
-
-    return Promise.resolve();
   }
 
   /**
