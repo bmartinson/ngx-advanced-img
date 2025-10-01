@@ -247,22 +247,24 @@ export class NgxAdvancedImgBitmap {
 
     return new Promise((resolve: (value: INgxAdvancedImgBitmapInfo) => void, reject: (reason?: any) => void) => {
       // parse the exif data direction while the image content loads
-      ExifReader
-        .load(new File([data], `photo-${Date.now()}`))
+      ExifReader.load(new File([data], `photo-${Date.now()}`))
         .then((exifData: any) => {
+          exifData = Object.keys(exifData).reduce(
+            (acc: { [key: string]: any }, key) => {
+              acc[key] = exifData[key].description || exifData[key].value || null;
+              return acc;
+            },
+            {} as { [key: string]: any }
+          );
 
-          exifData = Object.keys(exifData).reduce((acc: { [key: string]: any }, key) => {
-            acc[key] = exifData[key].description || exifData[key].value || null;
-            return acc;
-          }, {} as { [key: string]: any });
-          
           resolve({
             fileSize,
             exifData,
           });
-        }).catch((error: any) => {
-          reject(error);
         })
+        .catch((error: any) => {
+          reject(error);
+        });
     });
   }
 
@@ -510,17 +512,22 @@ export class NgxAdvancedImgBitmap {
       // parse the exif data direction while the image content loads
       const exifPromise = ExifReader.load(new File([blobData], `photo-${Date.now()}`))
         .then((exifData: any) => {
-            this._exifData = Object.keys(exifData).reduce((acc: { [key: string]: any }, key) => {
-            acc[key] = exifData[key].description || exifData[key].value || null;
+          this._exifData =
+            Object.keys(exifData).reduce(
+              (acc: { [key: string]: any }, key) => {
+                acc[key] = exifData[key].description || exifData[key].value || null;
 
-            // use numeric value for orientation
-            if (key === 'Orientation') {
-              acc[key] = exifData[key].value || 1;
-            }
+                // use numeric value for orientation
+                if (key === 'Orientation') {
+                  acc[key] = exifData[key].value || 1;
+                }
 
-            return acc;
-          }, {} as { [key: string]: any }) || {};
-        }).catch(() => {
+                return acc;
+              },
+              {} as { [key: string]: any }
+            ) || {};
+        })
+        .catch(() => {
           this._exifData = {};
         });
 

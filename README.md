@@ -15,8 +15,8 @@ Angular attribute directives suite that provides various HTML img feature extens
     - [ngxAdvancedImgFallback](#ngxadvancedimgfallback)
 - [Classes](#classes)
   - [NgxAdvancedImgBitmap](#ngxadvancedimgbitmap)
-      - [Creating Bitmap](#creating-bitmap)
-      - [Optimizing Bitmaps](#optimizing-bitmaps)
+    - [Creating Bitmap](#creating-bitmap)
+    - [Optimizing Bitmaps](#optimizing-bitmaps)
   - [NgxAdvancedImgCanvasHelper](#ngxadvancedimgcanvashelper)
   - [NgxAdvancedImgHeicConverter] (#ngxadvancedimgheicconverter)
 
@@ -155,6 +155,7 @@ This class is used to act as a static memory pool for HTMLCanvasElement allocati
 as often as possible and not rely on efficient JavaScript browser garbage collection.
 
 **Sample**
+
 ```typescript
 // get a canvas to work with...
 const canvas: HTMLCanvasElement = NgxAdvancedImgCanvasHelper.requestCanvas();
@@ -204,15 +205,13 @@ This class can be used within a web worker to convert a HEIC image to a differen
 You can convert a HEIC Blob object to another mimetype by using the `convert` function.
 
 **Sample**
+
 ```typescript
 // convert heic to jpeg before trying to load image
 let src: Blob = file;
 if (file.type === 'image/heic') {
   try {
-    const result = await this.workerConvert(
-      file,
-      'image/jpeg'
-    );
+    const result = await this.workerConvert(file, 'image/jpeg');
 
     src = result.blob;
   } catch (error) {
@@ -223,15 +222,13 @@ if (file.type === 'image/heic') {
 // load and optimize decoded HEIC
 const bitmap: NgxAdvancedImgBitmap = new NgxAdvancedImgBitmap(src, '', 0, 0);
 // ...
-
 ```
 
 **Web Worker Sample**
+
 ```typescript
 /// <reference lib="webworker" />
-
-import { NgxAdvancedImgHeicConverter } from "../../projects/ngx-advanced-img/src/lib/classes/heic-converter";
-
+import { NgxAdvancedImgHeicConverter } from '../../projects/ngx-advanced-img/src/lib/classes/heic-converter';
 
 addEventListener('message', async ({ data }) => {
   const file = data.file as File;
@@ -242,16 +239,12 @@ addEventListener('message', async ({ data }) => {
 
     postMessage(result);
   } catch (error) {
-    console.error("Worker error:", error instanceof Error ? error.stack : error);
+    console.error('Worker error:', error instanceof Error ? error.stack : error);
 
     // Return the original error if it is an Error object, otherwise create a new one
-    const errorMessage = error instanceof Error 
-        ? error 
-        : new Error(`Worker error: ${JSON.stringify(error)}`);
+    const errorMessage = error instanceof Error ? error : new Error(`Worker error: ${JSON.stringify(error)}`);
 
     postMessage(errorMessage);
   }
-
 });
-
 ```

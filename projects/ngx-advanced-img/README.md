@@ -15,8 +15,8 @@ Angular attribute directives suite that provides various HTML img feature extens
     - [ngxAdvancedImgFallback](#ngxadvancedimgfallback)
 - [Classes](#classes)
   - [NgxAdvancedImgBitmap](#ngxadvancedimgbitmap)
-      - [Creating Bitmap](#creating-bitmap)
-      - [Optimizing Bitmaps](#optimizing-bitmaps)
+    - [Creating Bitmap](#creating-bitmap)
+    - [Optimizing Bitmaps](#optimizing-bitmaps)
   - [NgxAdvancedImgCanvasHelper](#ngxadvancedimgcanvashelper)
 
 ## About This Package
@@ -154,6 +154,7 @@ This class is used to act as a static memory pool for HTMLCanvasElement allocati
 as often as possible and not rely on efficient JavaScript browser garbage collection.
 
 **Sample**
+
 ```typescript
 // get a canvas to work with...
 const canvas: HTMLCanvasElement = NgxAdvancedImgCanvasHelper.requestCanvas();

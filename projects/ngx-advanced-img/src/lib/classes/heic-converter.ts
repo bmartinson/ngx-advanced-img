@@ -152,7 +152,7 @@ export class NgxAdvancedImgHeicConverter {
 
             return acc;
           }, {} as any);
-            
+
           resolve({
             exifData,
             blob,
