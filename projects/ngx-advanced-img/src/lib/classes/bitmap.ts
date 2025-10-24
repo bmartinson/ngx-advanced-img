@@ -552,6 +552,7 @@ export class NgxAdvancedImgBitmap {
             try {
               if (!this.image) {
                 // throw error if image has been destroyed
+                onerror();
                 return;
               }
 
