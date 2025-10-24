@@ -548,177 +548,183 @@ export class NgxAdvancedImgBitmap {
 
         // image load success handler
         this.image.onload = async () => {
-          if (!this.image) {
-            // throw error if image has been destroyed
-            return;
-          }
-
-          const domURL: any = URL || webkitURL || window.URL;
-
-          if (this.mimeType !== 'image/svg+xml' || !allowXMLLoading) {
-            // if our browser doesn't support the URL implementation, fail the load
-            if (!domURL || !domURL.createObjectURL) {
-              onerror();
-
+          try {
+            if (!this.image) {
+              // throw error if image has been destroyed
               return;
             }
 
-            // create a canvas to paint to
-            const canvas: HTMLCanvasElement = NgxAdvancedImgCanvasHelper.requestCanvas();
+            const domURL: any = URL || webkitURL || window.URL;
 
-            // configure the dimensions of the canvas
-            canvas.width = this.image.width;
-            canvas.height = this.image.height;
+            if (this.mimeType !== 'image/svg+xml' || !allowXMLLoading) {
+              // if our browser doesn't support the URL implementation, fail the load
+              if (!domURL || !domURL.createObjectURL) {
+                onerror();
 
-            // acquire the rendering context
-            const ctx: CanvasRenderingContext2D | null = canvas?.getContext('2d', {
-              desynchronized: false,
-              willReadFrequently: true,
-            });
-
-            // if the context cannot be acquired, we should quit the operation
-            if (!ctx) {
-              onerror();
-
-              return;
-            }
-
-            // Enable image smoothing
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-
-            ctx.drawImage(this.image, 0, 0);
-
-            // if we haven't loaded anonymously, we'll taint the canvas and crash the application
-            const dataUri: string = anonymous ? canvas.toDataURL(this._mimeType, fullQualityLoad ? 1 : undefined) : '';
-
-            // if we got the bitmap data, create the link to download and invoke it
-            if (dataUri) {
-              // clear any existing object urls as necessary
-              if (this._objectURL) {
-                try {
-                  domURL.revokeObjectURL(this._objectURL);
-                } catch (error) {
-                  console.error('An error occurred while cleaning up resources.', error);
-                }
+                return;
               }
 
-              // get the bitmap data in blob format
-              this._objectURL = domURL.createObjectURL(NgxAdvancedImgBitmap.dataURItoBlob(dataUri));
-            }
+              // create a canvas to paint to
+              const canvas: HTMLCanvasElement = NgxAdvancedImgCanvasHelper.requestCanvas();
 
-            // clean up the canvas
-            if (canvas) {
-              NgxAdvancedImgCanvasHelper.returnCanvas(canvas);
-            }
+              // configure the dimensions of the canvas
+              canvas.width = this.image.width;
+              canvas.height = this.image.height;
 
-            this.loaded = true;
-            this.size = this.image.naturalWidth * this.image.naturalHeight;
+              // acquire the rendering context
+              const ctx: CanvasRenderingContext2D | null = canvas?.getContext('2d', {
+                desynchronized: false,
+                willReadFrequently: true,
+              });
 
-            const head = `data:${this._mimeType};base64,`;
-            this._fileSize = Math.round(atob(dataUri.substring(head.length)).length);
+              // if the context cannot be acquired, we should quit the operation
+              if (!ctx) {
+                onerror();
 
-            // track the time at which this asset was first asked to load
-            this.loadedAt = new Date();
+                return;
+              }
 
-            // if we have an expiration clock ticking, clear it
-            if (this.expirationClock) {
-              clearTimeout(this.expirationClock);
-            }
+              // Enable image smoothing
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'high';
 
-            await exifPromise;
-            this.adjustForExifOrientation();
+              ctx.drawImage(this.image, 0, 0);
 
-            // if we loaded a non-svg, then we are done loading
-            resolve(this);
-          } else {
-            const client: XMLHttpRequest = new XMLHttpRequest();
-            client.open('GET', this.image.src);
-            client.onreadystatechange = () => {
-              // if the document ready state is finished and ready
-              if (client.readyState === 4) {
-                let svg: any = new NgxAdvancedImgJxon().stringToXml(client.responseText).getElementsByTagName('svg')[0];
+              // if we haven't loaded anonymously, we'll taint the canvas and crash the application
+              const dataUri: string = anonymous ? canvas.toDataURL(this._mimeType, fullQualityLoad ? 1 : undefined) : '';
 
-                // 'viewBox' is now a string, parse the string for the viewBox values - can be separated by whitespace and/or a comma
-                const viewBox: string[] = svg.getAttribute('viewBox').split(/[ ,]/);
-
-                // make sure the viewBox is set
-                if (viewBox.length !== 4) {
-                  onerror();
-
-                  return;
-                }
-
-                // get the width and height from the viewBox
-                const svgWidth: number = +viewBox[2];
-                const svgHeight: number = +viewBox[3];
-
-                // viewBox width and height is considered to be a required attribute, so check its existence and validity
-                if (
-                  !svgWidth ||
-                  !svgHeight ||
-                  isNaN(svgWidth) ||
-                  isNaN(svgHeight) ||
-                  !isFinite(svgWidth) ||
-                  !isFinite(svgHeight)
-                ) {
-                  onerror();
-
-                  return;
-                }
-
-                // set the width and height from the view box definition
-                svg.setAttribute('width', svgWidth);
-                svg.setAttribute('height', svgHeight);
-
-                // never preserve aspect ratio so the entire image fills the element boundaries
-                svg.setAttribute('preserveAspectRatio', 'none');
-
-                const svgXML: string = new NgxAdvancedImgJxon().xmlToString(svg);
-                svg = new Blob([svgXML], { type: this.mimeType + ';charset=utf-8' });
-
-                // if our browser doesn't support the URL implementation, fail the load
-                if (!this.image || !domURL || !domURL.createObjectURL) {
-                  onerror();
-
-                  return;
-                }
-
-                this.image.onload = async () => {
-                  this.loaded = true;
-                  this.size = svgWidth * svgHeight;
-
-                  // track the time at which this asset was first asked to load
-                  this.loadedAt = new Date();
-
-                  // if we have an expiration clock ticking, clear it
-                  if (this.expirationClock) {
-                    clearTimeout(this.expirationClock);
-                  }
-
-                  await exifPromise;
-                  this.adjustForExifOrientation();
-
-                  // the image has successfully loaded
-                  resolve(this);
-                };
-
+              // if we got the bitmap data, create the link to download and invoke it
+              if (dataUri) {
                 // clear any existing object urls as necessary
                 if (this._objectURL) {
                   try {
                     domURL.revokeObjectURL(this._objectURL);
                   } catch (error) {
-                    console.error(error);
+                    console.error('An error occurred while cleaning up resources.', error);
                   }
                 }
 
-                this.image.loading = 'eager';
-                this.image.src = this._objectURL = domURL.createObjectURL(svg);
+                // get the bitmap data in blob format
+                this._objectURL = domURL.createObjectURL(NgxAdvancedImgBitmap.dataURItoBlob(dataUri));
               }
-            };
 
-            // issue the file load
-            client.send();
+              // clean up the canvas
+              if (canvas) {
+                NgxAdvancedImgCanvasHelper.returnCanvas(canvas);
+              }
+
+              this.loaded = true;
+              this.size = this.image.naturalWidth * this.image.naturalHeight;
+
+              const head = `data:${this._mimeType};base64,`;
+              this._fileSize = Math.round(atob(dataUri.substring(head.length)).length);
+
+              // track the time at which this asset was first asked to load
+              this.loadedAt = new Date();
+
+              // if we have an expiration clock ticking, clear it
+              if (this.expirationClock) {
+                clearTimeout(this.expirationClock);
+              }
+
+              await exifPromise;
+              this.adjustForExifOrientation();
+
+              // if we loaded a non-svg, then we are done loading
+              resolve(this);
+            } else {
+              const client: XMLHttpRequest = new XMLHttpRequest();
+              client.open('GET', this.image.src);
+              client.onreadystatechange = () => {
+                // if the document ready state is finished and ready
+                if (client.readyState === 4) {
+                  let svg: any = new NgxAdvancedImgJxon().stringToXml(client.responseText).getElementsByTagName('svg')[0];
+
+                  // 'viewBox' is now a string, parse the string for the viewBox values - can be separated by whitespace and/or a comma
+                  const viewBox: string[] = svg.getAttribute('viewBox').split(/[ ,]/);
+
+                  // make sure the viewBox is set
+                  if (viewBox.length !== 4) {
+                    onerror();
+
+                    return;
+                  }
+
+                  // get the width and height from the viewBox
+                  const svgWidth: number = +viewBox[2];
+                  const svgHeight: number = +viewBox[3];
+
+                  // viewBox width and height is considered to be a required attribute, so check its existence and validity
+                  if (
+                    !svgWidth ||
+                    !svgHeight ||
+                    isNaN(svgWidth) ||
+                    isNaN(svgHeight) ||
+                    !isFinite(svgWidth) ||
+                    !isFinite(svgHeight)
+                  ) {
+                    onerror();
+
+                    return;
+                  }
+
+                  // set the width and height from the view box definition
+                  svg.setAttribute('width', svgWidth);
+                  svg.setAttribute('height', svgHeight);
+
+                  // never preserve aspect ratio so the entire image fills the element boundaries
+                  svg.setAttribute('preserveAspectRatio', 'none');
+
+                  const svgXML: string = new NgxAdvancedImgJxon().xmlToString(svg);
+                  svg = new Blob([svgXML], { type: this.mimeType + ';charset=utf-8' });
+
+                  // if our browser doesn't support the URL implementation, fail the load
+                  if (!this.image || !domURL || !domURL.createObjectURL) {
+                    onerror();
+
+                    return;
+                  }
+
+                  this.image.onload = async () => {
+                    this.loaded = true;
+                    this.size = svgWidth * svgHeight;
+
+                    // track the time at which this asset was first asked to load
+                    this.loadedAt = new Date();
+
+                    // if we have an expiration clock ticking, clear it
+                    if (this.expirationClock) {
+                      clearTimeout(this.expirationClock);
+                    }
+
+                    await exifPromise;
+                    this.adjustForExifOrientation();
+
+                    // the image has successfully loaded
+                    resolve(this);
+                  };
+
+                  // clear any existing object urls as necessary
+                  if (this._objectURL) {
+                    try {
+                      domURL.revokeObjectURL(this._objectURL);
+                    } catch (error) {
+                      console.error(error);
+                    }
+                  }
+
+                  this.image.loading = 'eager';
+                  this.image.src = this._objectURL = domURL.createObjectURL(svg);
+                }
+              };
+
+              // issue the file load
+              client.send();
+            }
+          } catch (error) {
+            console.log('caught error', error);
+            onerror();
+            return;
           }
         };
 
