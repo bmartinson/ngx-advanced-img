@@ -593,7 +593,9 @@ export class NgxAdvancedImgBitmap {
                 ctx.drawImage(this.image, 0, 0);
 
                 // if we haven't loaded anonymously, we'll taint the canvas and crash the application
-                const dataUri: string = anonymous ? canvas.toDataURL(this._mimeType, fullQualityLoad ? 1 : undefined) : '';
+                const dataUri: string = anonymous
+                  ? canvas.toDataURL(this._mimeType, fullQualityLoad ? 1 : undefined)
+                  : '';
 
                 // if we got the bitmap data, create the link to download and invoke it
                 if (dataUri) {
@@ -641,7 +643,9 @@ export class NgxAdvancedImgBitmap {
                   try {
                     // if the document ready state is finished and ready
                     if (client.readyState === 4) {
-                      let svg: any = new NgxAdvancedImgJxon().stringToXml(client.responseText).getElementsByTagName('svg')[0];
+                      let svg: any = new NgxAdvancedImgJxon()
+                        .stringToXml(client.responseText)
+                        .getElementsByTagName('svg')[0];
 
                       // 'viewBox' is now a string, parse the string for the viewBox values - can be separated by whitespace and/or a comma
                       const viewBox: string[] = svg.getAttribute('viewBox').split(/[ ,]/);
@@ -728,7 +732,6 @@ export class NgxAdvancedImgBitmap {
                     console.log('SVG Load Error', error);
                     onerror();
                   }
-                  
                 };
 
                 // issue the file load
