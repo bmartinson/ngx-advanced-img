@@ -7,8 +7,9 @@
     "declarationMap": true,
     "inlineSources": true,
     "types": [],
-    "typeRoots": ["src/lib/types/libheif.d.ts"],
-    "lib": ["dom", "es2018"]
+    "typeRoots": [
+      "src/lib/types/libheif.d.ts"
+    ]
   },
   "exclude": ["**/*.spec.ts"]
 }
