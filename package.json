@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "prep-release": "./scripts/bump-package-version.sh $(jq -r .name package.json)",
+    "prep-release": "./scripts/bump-package-version.sh ngx-advanced-img",
     "build": "ng build ngx-advanced-img --configuration production",
     "build-publish": "npm run build-publish-npmjs && npm run build-publish-github && npm run _tag-release",
     "_build-publish": "ng build ngx-advanced-img --configuration=production && cd dist/ngx-advanced-img/ && npm publish && cd ../.. && rm -rf ./dist",
