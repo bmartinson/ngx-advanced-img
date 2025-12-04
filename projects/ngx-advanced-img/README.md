@@ -1,6 +1,6 @@
 # ngx-advanced-img
 
-Angular attribute directives suite that provides various HTML img feature extensions.
+A multi-purpose utility package with the goal of providing high performing and easy to use tools for image handling in modern Angular web applications. Best known for high performance image optimization and conversion tools.
 
 ## Table of contents
 
@@ -15,8 +15,8 @@ Angular attribute directives suite that provides various HTML img feature extens
     - [ngxAdvancedImgFallback](#ngxadvancedimgfallback)
 - [Classes](#classes)
   - [NgxAdvancedImgBitmap](#ngxadvancedimgbitmap)
-    - [Creating Bitmap](#creating-bitmap)
-    - [Optimizing Bitmaps](#optimizing-bitmaps)
+      - [Creating Bitmap](#creating-bitmap)
+      - [Optimizing Bitmaps](#optimizing-bitmaps)
   - [NgxAdvancedImgCanvasHelper](#ngxadvancedimgcanvashelper)
 
 ## About This Package
