@@ -50,7 +50,7 @@
     "@angular/router": "^21.0.3",
     "@types/mime-types": "^3.0.1",
     "@xmldom/xmldom": "~0.9.8",
-    "exifreader": "^4.32.0",
+    "exifreader": "^4.33.1",
     "libheif-js": "^1.19.8",
     "mime": "^4.1.0",
     "rxjs": "~7.8.2",
@@ -64,7 +64,7 @@
     "@angular/compiler-cli": "^21.0.3",
     "@trivago/prettier-plugin-sort-imports": "^6.0.0",
     "@types/jasmine": "~5.1.13",
-    "@types/node": "^24.10.1",
+    "@types/node": "^24.10.2",
     "angular-eslint": "21.1.0",
     "eslint": "^9.39.1",
     "eslint-plugin-import": "2.32.0",
@@ -77,6 +77,6 @@
     "ng-packagr": "^21.0.0",
     "prettier": "^3.7.4",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.48.1"
+    "typescript-eslint": "^8.49.0"
   }
 }
