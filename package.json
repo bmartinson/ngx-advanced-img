@@ -46,7 +46,7 @@
     "@angular/router": "^21.2.14",
     "@types/mime-types": "^3.0.1",
     "@xmldom/xmldom": "~0.9.10",
-    "exifreader": "^4.38.1",
+    "exifreader": "^4.39.0",
     "libheif-js": "^1.19.8",
     "mime": "^4.1.0",
     "rxjs": "~7.8.2",
