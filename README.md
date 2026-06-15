@@ -15,8 +15,8 @@ A multi-purpose utility package with the goal of providing high performing and e
     - [ngxAdvancedImgFallback](#ngxadvancedimgfallback)
 - [Classes](#classes)
   - [NgxAdvancedImgBitmap](#ngxadvancedimgbitmap)
-      - [Creating Bitmap](#creating-bitmap)
-      - [Optimizing Bitmaps](#optimizing-bitmaps)
+    - [Creating Bitmap](#creating-bitmap)
+    - [Optimizing Bitmaps](#optimizing-bitmaps)
   - [NgxAdvancedImgCanvasHelper](#ngxadvancedimgcanvashelper)
   - [NgxAdvancedImgHeicConverter](#ngxadvancedimgheicconverter)
 

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { v4 as uuidv4 } from 'uuid';
 
 import {
@@ -14,6 +14,7 @@ import {
   selector: 'ngx-advanced-img-lib-app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [NgxAdvancedImgFallbackDirective],
 })
 export class AppComponent {
