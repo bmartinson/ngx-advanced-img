@@ -36,14 +36,14 @@
   },
   "homepage": "https://github.com/bmartinson/ngx-advanced-img#readme",
   "dependencies": {
-    "@angular/animations": "^22.0.6",
-    "@angular/common": "^22.0.6",
-    "@angular/compiler": "^22.0.6",
-    "@angular/core": "^22.0.6",
-    "@angular/forms": "^22.0.6",
-    "@angular/platform-browser": "^22.0.6",
-    "@angular/platform-browser-dynamic": "^22.0.6",
-    "@angular/router": "^22.0.6",
+    "@angular/animations": "^22.0.7",
+    "@angular/common": "^22.0.7",
+    "@angular/compiler": "^22.0.7",
+    "@angular/core": "^22.0.7",
+    "@angular/forms": "^22.0.7",
+    "@angular/platform-browser": "^22.0.7",
+    "@angular/platform-browser-dynamic": "^22.0.7",
+    "@angular/router": "^22.0.7",
     "@types/mime-types": "^3.0.1",
     "@xmldom/xmldom": "~0.9.10",
     "exifreader": "^4.41.0",
@@ -55,16 +55,16 @@
     "zone.js": "~0.16.2"
   },
   "devDependencies": {
-    "@angular/build": "^22.0.6",
-    "@angular/cli": "~22.0.6",
-    "@angular/compiler-cli": "^22.0.6",
+    "@angular/build": "^22.0.7",
+    "@angular/cli": "~22.0.7",
+    "@angular/compiler-cli": "^22.0.7",
     "@eslint/js": "^10.0.1",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "@types/jasmine": "~6.0.0",
     "@types/node": "^26.1.1",
-    "angular-eslint": "22.0.0",
-    "baseline-browser-mapping": "^2.10.42",
-    "eslint": "^10.6.0",
+    "angular-eslint": "22.1.0",
+    "baseline-browser-mapping": "^2.10.43",
+    "eslint": "^10.7.0",
     "istanbul-lib-instrument": "^6.0.3",
     "jasmine-core": "~6.3.0",
     "karma": "~6.4.4",
@@ -75,6 +75,6 @@
     "ng-packagr": "^22.0.1",
     "prettier": "^3.9.5",
     "typescript": "~6.0.3",
-    "typescript-eslint": "^8.63.0"
+    "typescript-eslint": "^8.64.0"
   }
 }
