@@ -46,7 +46,7 @@
     "@angular/router": "^22.0.7",
     "@types/mime-types": "^3.0.1",
     "@xmldom/xmldom": "~0.9.10",
-    "exifreader": "^4.41.0",
+    "exifreader": "^4.41.3",
     "libheif-js": "^1.19.8",
     "mime": "^4.1.0",
     "rxjs": "~7.8.2",
@@ -63,7 +63,7 @@
     "@types/jasmine": "~6.0.0",
     "@types/node": "^26.1.1",
     "angular-eslint": "22.1.0",
-    "baseline-browser-mapping": "^2.10.43",
+    "baseline-browser-mapping": "^2.10.44",
     "eslint": "^10.7.0",
     "istanbul-lib-instrument": "^6.0.3",
     "jasmine-core": "~6.3.0",
@@ -75,6 +75,6 @@
     "ng-packagr": "^22.0.1",
     "prettier": "^3.9.5",
     "typescript": "~6.0.3",
-    "typescript-eslint": "^8.64.0"
+    "typescript-eslint": "^8.65.0"
   }
 }
