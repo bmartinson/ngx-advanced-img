@@ -147,7 +147,7 @@ export class NgxAdvancedImgHeicConverter {
 
             // use numeric value for orientation
             if (key === 'Orientation') {
-              acc[key] = exifData[key].value || 1;
+              acc[key] = exifData[key]?.value || 1;
             }
 
             return acc;

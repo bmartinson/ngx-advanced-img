@@ -67,11 +67,7 @@ export class AppComponent {
 
   public onModeChange(event: Event): void {
     this.mode = (event?.target as HTMLInputElement)?.value as
-      | 'retain-size'
-      | 'retain-quality'
-      | 'prefer-size'
-      | 'prefer-quality'
-      | 'alternating-preference';
+      'retain-size' | 'retain-quality' | 'prefer-size' | 'prefer-quality' | 'alternating-preference';
   }
 
   public prettyLog(

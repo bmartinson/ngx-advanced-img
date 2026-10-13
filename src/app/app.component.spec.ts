@@ -1,11 +1,12 @@
 import { TestBed } from '@angular/core/testing';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { AppComponent } from './app.component';
 
 describe('AppComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [AppComponent],
+      imports: [AppComponent],
     }).compileComponents();
   });
 
@@ -15,16 +16,17 @@ describe('AppComponent', () => {
     expect(app).toBeTruthy();
   });
 
-  it(`should have as title 'ngx-advanced-img'`, () => {
+  it('should initialize image optimization defaults', () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
-    expect(app.title).toEqual('ngx-advanced-img');
+    expect(app.scale).toBe(100);
+    expect(app.quality).toBe(1);
   });
 
-  it('should render title', () => {
+  it('should render the app heading', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.content span')?.textContent).toContain('ngx-advanced-img app is running!');
+    expect(compiled.querySelector('h1')?.textContent).toContain('Welcome to ngx-advanced-img!');
   });
 });
