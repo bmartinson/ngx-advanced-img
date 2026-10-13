@@ -49,12 +49,12 @@
     "@angular/platform-browser-dynamic": "^22.2.2",
     "@angular/router": "^22.2.2",
     "@xmldom/xmldom": "~0.9.12",
-    "exifreader": "^4.47.0",
+    "exifreader": "^4.50.0",
     "libheif-js": "^1.23.5",
-    "mime": "^4.1.0",
+    "mime": "^4.1.1",
     "rxjs": "~7.8.2",
     "tslib": "^2.8.1",
-    "uuid": "^14.0.2",
+    "uuid": "^14.0.3",
     "zone.js": "~0.16.3"
   },
   "devDependencies": {
@@ -64,8 +64,8 @@
     "@eslint/js": "^10.0.1",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "@types/jasmine": "~6.0.0",
-    "@types/node": "^26.6.4",
-    "angular-eslint": "22.5.0",
+    "@types/node": "^26.6.5",
+    "angular-eslint": "22.6.0",
     "baseline-browser-mapping": "^2.11.28",
     "eslint": "^10.12.0",
     "istanbul-lib-instrument": "^6.0.3",
@@ -76,8 +76,8 @@
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.3.0",
     "ng-packagr": "^22.2.4",
-    "prettier": "^3.9.9",
+    "prettier": "^3.9.10",
     "typescript": "~6.0.3",
-    "typescript-eslint": "^8.71.1"
+    "typescript-eslint": "^8.71.2"
   }
 }
