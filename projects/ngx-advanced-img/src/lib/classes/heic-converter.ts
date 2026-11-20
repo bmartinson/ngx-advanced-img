@@ -1,5 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as ExifReader from 'exifreader';
-// @ts-ignore
 import libheif from 'libheif-js/wasm-bundle';
 
 export interface INgxAdvancedImgHeicConversion {
