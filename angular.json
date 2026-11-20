@@ -99,20 +99,28 @@
     "ngx-advanced-img": {
       "projectType": "library",
       "root": "projects/ngx-advanced-img",
-      "sourceRoot": "projects/ngx-advanced-img/src",
+      "sourceRoot": "projects/ngx-advanced-img",
       "prefix": "ngxAdvancedImg",
       "architect": {
         "build": {
-          "builder": "@angular/build:ng-packagr",
+          "builder": "@angular/build:library",
           "options": {
-            "project": "projects/ngx-advanced-img/ng-package.json"
+            "tsConfig": "projects/ngx-advanced-img/tsconfig.lib.json",
+            "outputPath": "dist/ngx-advanced-img",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "projects/ngx-advanced-img/src/lib/styles",
+                "output": "./styles"
+              }
+            ]
           },
           "configurations": {
             "production": {
               "tsConfig": "projects/ngx-advanced-img/tsconfig.lib.prod.json"
             },
             "development": {
-              "tsConfig": "projects/ngx-advanced-img/tsconfig.lib.json"
+              "compilationMode": "full"
             }
           },
           "defaultConfiguration": "production"
