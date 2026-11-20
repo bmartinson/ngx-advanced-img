@@ -82,7 +82,8 @@ export class NgxAdvancedImgHeicConverter {
    */
   public static async decodeHeic(buffer: Uint8Array): Promise<ImageData> {
     const decoder = new libheif.HeifDecoder();
-    let imagesArr = decoder.decode(buffer);
+    const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
+    let imagesArr = decoder.decode(arrayBuffer);
 
     if (!imagesArr || !imagesArr.length) {
       return Promise.reject(new Error('ERR_LIBHEIF format not supported'));
