@@ -78,7 +78,7 @@ export class NgxAdvancedImgHeicConverter {
   /**
    * Decodes a buffer containing HEIC data into an ImageData object using the libheif-js WebAssembly bundle.
    * @param buffer
-   * @returns ImageData object containg raw pixel data
+   * @returns ImageData object containing raw pixel data
    */
   public static async decodeHeic(buffer: Uint8Array): Promise<ImageData> {
     const decoder = new libheif.HeifDecoder();
